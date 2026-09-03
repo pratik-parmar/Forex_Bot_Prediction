@@ -16,7 +16,7 @@ An interactive, real-time Forex Trading Dashboard built for monitoring **XAUUSD 
 
 - **Frontend Interface:** HTML5, CSS3, JavaScript (Vanilla ES6+)
 - **Charting Engine:** TradingView Widget Integration (`OANDA:XAUUSD`)
-- **Backend API Support (Optional):** Node.js / Python backend supporting historical candles via `/api/market-candles/`
+- **Backend API Support (Optional):**  Python backend supporting historical candles via `/api/market-candles/`
 - **Hosting & Deployment:** Render
 
 ---
