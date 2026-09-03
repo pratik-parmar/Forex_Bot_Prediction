@@ -7,10 +7,7 @@
 
     <title>Forex Trading Dashboard</title>
 
-    <!-- Lightweight Charts -->
-    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
     <style>
-
         * {
             margin: 0;
             padding: 0;
@@ -30,14 +27,12 @@
         }
 
         /* Layout */
-
         .app {
             display: flex;
             min-height: 100vh;
         }
 
         /* Sidebar */
-
         .sidebar {
             width: 230px;
             background: #151821;
@@ -69,18 +64,13 @@
             font-size: 14px;
         }
 
-        .menu button:hover {
-            background: #242832;
-            color: white;
-        }
-
+        .menu button:hover,
         .menu button.active {
             background: #242832;
             color: white;
         }
 
         /* Main */
-
         .main {
             flex: 1;
             padding: 20px;
@@ -88,7 +78,6 @@
         }
 
         /* Header */
-
         .header {
             display: flex;
             justify-content: space-between;
@@ -121,7 +110,6 @@
         }
 
         /* Stats */
-
         .stats {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -148,7 +136,6 @@
         }
 
         /* Chart */
-
         .chart-card {
             background: #151821;
             border: 1px solid #292d36;
@@ -195,19 +182,7 @@
             color: #111111;
         }
 
-        #chart {
-            width: 100%;
-            height: 500px;
-        }
-
-        #data-status {
-            margin-top: 10px;
-            color: #8c919c;
-            font-size: 12px;
-        }
-
         /* Bottom panels */
-
         .bottom-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -241,7 +216,6 @@
         }
 
         /* Signal */
-
         .signal-box {
             padding: 15px;
             border-radius: 7px;
@@ -256,7 +230,6 @@
         }
 
         /* Trade */
-
         .trade-row {
             display: flex;
             justify-content: space-between;
@@ -294,16 +267,12 @@
             background: #ef5350;
         }
 
-        .buy-btn:hover {
-            opacity: 0.85;
-        }
-
+        .buy-btn:hover,
         .sell-btn:hover {
             opacity: 0.85;
         }
 
-        /* Light mode */
-
+        /* Light mode overrides */
         body.light .sidebar,
         body.light .card,
         body.light .chart-card,
@@ -334,9 +303,7 @@
         }
 
         /* Responsive */
-
         @media (max-width: 1000px) {
-
             .sidebar {
                 width: 180px;
             }
@@ -344,11 +311,9 @@
             .stats {
                 grid-template-columns: repeat(2, 1fr);
             }
-
         }
 
         @media (max-width: 700px) {
-
             .app {
                 flex-direction: column;
             }
@@ -368,16 +333,9 @@
                 padding: 12px;
             }
 
-            .stats {
-                grid-template-columns: 1fr;
-            }
-
+            .stats,
             .bottom-grid {
                 grid-template-columns: 1fr;
-            }
-
-            #chart {
-                height: 400px;
             }
 
             .chart-header {
@@ -385,11 +343,8 @@
                 align-items: flex-start;
                 gap: 15px;
             }
-
         }
-
     </style>
-
 </head>
 
 <body>
@@ -397,353 +352,132 @@
 <div class="app">
 
     <!-- Sidebar -->
-
     <aside class="sidebar">
-
-        <div class="logo">
-            Forex Terminal
-        </div>
-
+        <div class="logo">Forex Terminal</div>
         <div class="menu">
-
-            <button class="active">
-                Dashboard
-            </button>
-
-            <button>
-                Markets
-            </button>
-
-            <button>
-                Signals
-            </button>
-
-            <button>
-                Trades
-            </button>
-
-            <button>
-                Settings
-            </button>
-
+            <button class="active">Dashboard</button>
+            <button>Markets</button>
+            <button>Signals</button>
+            <button>Trades</button>
+            <button>Settings</button>
         </div>
-
     </aside>
 
-
-    <!-- Main -->
-
+    <!-- Main Content -->
     <main class="main">
 
         <!-- Header -->
-
         <div class="header">
-
-            <h1>
-                Trading Dashboard
-            </h1>
-
+            <h1>Trading Dashboard</h1>
             <div class="header-right">
-
-                <span
-                    class="connection"
-                    id="market-status">
-                    Connecting...
-                </span>
-
-                <button
-                    class="theme-btn"
-                    onclick="toggleTheme()">
-                    Toggle Theme
-                </button>
-
+                <span class="connection" id="market-status">Connecting...</span>
+                <button class="theme-btn" onclick="toggleTheme()">Toggle Theme</button>
             </div>
-
         </div>
 
-
-        <!-- Statistics -->
-
+        <!-- Statistics Cards -->
         <div class="stats">
-
             <div class="card">
-
-                <div class="card-title">
-                    ACCOUNT BALANCE
-                </div>
-
-                <div
-                    class="card-value"
-                    id="balance">
-                    $150.00
-                </div>
-
+                <div class="card-title">ACCOUNT BALANCE</div>
+                <div class="card-value" id="balance">$150.00</div>
             </div>
 
-
             <div class="card">
-
-                <div class="card-title">
-                    XAUUSD PRICE
-                </div>
-
-                <div
-                    class="card-value"
-                    id="price">
-                    --
-                </div>
-
+                <div class="card-title">XAUUSD PRICE</div>
+                <div class="card-value" id="price">$--.--</div>
             </div>
 
-
             <div class="card">
-
-                <div class="card-title">
-                    TIMEFRAME
-                </div>
-
-                <div
-                    class="card-value"
-                    id="current-timeframe">
-                    15m
-                </div>
-
+                <div class="card-title">TIMEFRAME</div>
+                <div class="card-value" id="current-timeframe">15m</div>
             </div>
 
-
             <div class="card">
-
-                <div class="card-title">
-                    MAX RISK
-                </div>
-
-                <div class="card-value">
-                    $1.50
-                </div>
-
+                <div class="card-title">MAX RISK</div>
+                <div class="card-value">$1.50</div>
             </div>
-
         </div>
 
-
-        <!-- Chart -->
-
+        <!-- Chart Section -->
         <div class="chart-card">
-
             <div class="chart-header">
-
                 <div>
-
-                    <div class="symbol">
-                        XAUUSD
-                    </div>
-
-                    <small>
-                        Gold / US Dollar
-                    </small>
-
+                    <div class="symbol">XAUUSD</div>
+                    <small>Gold / US Dollar</small>
                 </div>
 
-
+                <!-- Synchronized Timeframe Controls -->
                 <div class="timeframes">
-
-                    <button
-                        class="timeframe-btn"
-                        data-timeframe="1m">
-                        1m
-                    </button>
-
-                    <button
-                        class="timeframe-btn"
-                        data-timeframe="5m">
-                        5m
-                    </button>
-
-                    <button
-                        class="timeframe-btn active"
-                        data-timeframe="15m">
-                        15m
-                    </button>
-
-                    <button
-                        class="timeframe-btn"
-                        data-timeframe="30m">
-                        30m
-                    </button>
-
-                    <button
-                        class="timeframe-btn"
-                        data-timeframe="1h">
-                        1H
-                    </button>
-
-                    <button
-                        class="timeframe-btn"
-                        data-timeframe="4h">
-                        4H
-                    </button>
-
-                    <button
-                        class="timeframe-btn"
-                        data-timeframe="1d">
-                        1D
-                    </button>
-
+                    <button class="timeframe-btn" data-tv="1" data-display="1m">1m</button>
+                    <button class="timeframe-btn" data-tv="5" data-display="5m">5m</button>
+                    <button class="timeframe-btn active" data-tv="15" data-display="15m">15m</button>
+                    <button class="timeframe-btn" data-tv="30" data-display="30m">30m</button>
+                    <button class="timeframe-btn" data-tv="60" data-display="1H">1H</button>
+                    <button class="timeframe-btn" data-tv="D" data-display="1D">1D</button>
                 </div>
-
             </div>
 
-
-            <div id="chart"></div>
-
-            <div id="data-status">
-                Loading market data...
+            <!-- Embedded TradingView Chart Widget -->
+            <div class="tradingview-widget-container" style="height: 500px; width: 100%;">
+                <div id="tradingview_xauusd" style="height: 100%; width: 100%;"></div>
             </div>
-
         </div>
 
-
-        <!-- Bottom panels -->
-
+        <!-- Bottom Panels -->
         <div class="bottom-grid">
 
-
-            <!-- Indicators -->
-
+            <!-- Technical Indicators -->
             <div class="panel">
-
-                <h3>
-                    Technical Indicators
-                </h3>
-
+                <h3>Technical Indicators</h3>
 
                 <div class="indicator">
-
-                    <span class="indicator-label">
-                        EMA 20
-                    </span>
-
-                    <span id="ema20">
-                        --
-                    </span>
-
+                    <span class="indicator-label">EMA 20</span>
+                    <span id="ema20">--</span>
                 </div>
-
 
                 <div class="indicator">
-
-                    <span class="indicator-label">
-                        EMA 50
-                    </span>
-
-                    <span id="ema50">
-                        --
-                    </span>
-
+                    <span class="indicator-label">EMA 50</span>
+                    <span id="ema50">--</span>
                 </div>
-
 
                 <div class="indicator">
-
-                    <span class="indicator-label">
-                        RSI 14
-                    </span>
-
-                    <span id="rsi">
-                        --
-                    </span>
-
+                    <span class="indicator-label">RSI 14</span>
+                    <span id="rsi">--</span>
                 </div>
-
 
                 <div class="indicator">
-
-                    <span class="indicator-label">
-                        ATR 14
-                    </span>
-
-                    <span id="atr">
-                        --
-                    </span>
-
+                    <span class="indicator-label">ATR 14</span>
+                    <span id="atr">--</span>
                 </div>
-
             </div>
 
-
-            <!-- Trading signal -->
-
+            <!-- Trading Signals -->
             <div class="panel">
-
-                <h3>
-                    Trading Signal
-                </h3>
-
+                <h3>Trading Signal</h3>
 
                 <div class="signal-box">
-
-                    <div id="signal">
-                        HOLD
-                    </div>
-
+                    <div id="signal">HOLD</div>
                 </div>
-
 
                 <div class="trade-row">
-
-                    <span>
-                        Entry
-                    </span>
-
-                    <span id="entry">
-                        --
-                    </span>
-
+                    <span>Entry</span>
+                    <span id="entry">--</span>
                 </div>
-
 
                 <div class="trade-row">
-
-                    <span>
-                        Stop Loss
-                    </span>
-
-                    <span id="stop-loss">
-                        --
-                    </span>
-
+                    <span>Stop Loss</span>
+                    <span id="stop-loss">--</span>
                 </div>
-
 
                 <div class="trade-row">
-
-                    <span>
-                        Take Profit
-                    </span>
-
-                    <span id="take-profit">
-                        --
-                    </span>
-
+                    <span>Take Profit</span>
+                    <span id="take-profit">--</span>
                 </div>
-
 
                 <div class="trade-buttons">
-
-                    <button
-                        class="buy-btn"
-                        onclick="buyTrade()">
-                        BUY
-                    </button>
-
-                    <button
-                        class="sell-btn"
-                        onclick="sellTrade()">
-                        SELL
-                    </button>
-
+                    <button class="buy-btn" onclick="buyTrade()">BUY</button>
+                    <button class="sell-btn" onclick="sellTrade()">SELL</button>
                 </div>
-
             </div>
 
         </div>
@@ -752,142 +486,68 @@
 
 </div>
 
+<!-- TradingView Script -->
+<script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 
 <script>
+/*
+====================================================
+GLOBAL VARIABLES & STATE
+====================================================
+*/
+let currentInterval = "15";
+let globalCandles = [];
 
 /*
 ====================================================
-GLOBAL VARIABLES
+TRADINGVIEW WIDGET INITIALIZATION
 ====================================================
 */
-
-let currentTimeframe = "15m";
-let isFetching = false;
-
-
-/*
-====================================================
-CHART CONTAINER
-====================================================
-*/
-
-const chartContainer =
-    document.getElementById("chart");
-
-
-/*
-====================================================
-CREATE CHART
-====================================================
-*/
-
-const chart =
-    LightweightCharts.createChart(
-        chartContainer,
-        {
-            layout: {
-                background: {
-                    color: "#151821"
-                },
-
-                textColor: "#AAAAAA"
-            },
-
-            grid: {
-                vertLines: {
-                    color: "#242832"
-                },
-
-                horzLines: {
-                    color: "#242832"
-                }
-            },
-
-            crosshair: {
-                mode:
-                    LightweightCharts.CrosshairMode.Normal
-            },
-
-            rightPriceScale: {
-                borderColor: "#333842",
-
-                autoScale: true
-            },
-
-            timeScale: {
-
-                borderColor: "#333842",
-
-                timeVisible: true,
-
-                secondsVisible: false,
-
-                rightOffset: 5,
-
-                barSpacing: 8,
-
-                minBarSpacing: 2,
-
-                fixLeftEdge: false,
-
-                fixRightEdge: false
-
-            },
-
-            handleScroll: {
-
-                mouseWheel: true,
-
-                pressedMouseMove: true,
-
-                horzTouchDrag: true,
-
-                vertTouchDrag: true
-
-            },
-
-            handleScale: {
-
-                mouseWheel: true,
-
-                pinch: true,
-
-                axisPressedMouseMove: true
-
-            }
-
-        }
-    );
-
-
-/*
-====================================================
-CANDLESTICK SERIES
-====================================================
-*/
-
-const candleSeries =
-    chart.addCandlestickSeries({
-
-        upColor: "#26a69a",
-
-        downColor: "#ef5350",
-
-        borderVisible: false,
-
-        wickUpColor: "#26a69a",
-
-        wickDownColor: "#ef5350"
-
+function renderTradingViewWidget(interval) {
+    new TradingView.widget({
+        "autosize": true,
+        "symbol": "OANDA:XAUUSD",
+        "interval": interval,
+        "timezone": "Etc/UTC",
+        "theme": document.body.classList.contains("light") ? "light" : "dark",
+        "style": "1",
+        "locale": "en",
+        "enable_publishing": false,
+        "allow_symbol_change": true,
+        "container_id": "tradingview_xauusd"
     });
+}
 
+/*
+====================================================
+TIMEFRAME SWITCHING & SYNC
+====================================================
+*/
+document.querySelectorAll(".timeframe-btn").forEach(button => {
+    button.addEventListener("click", function () {
+        document.querySelectorAll(".timeframe-btn").forEach(btn => btn.classList.remove("active"));
+        this.classList.add("active");
+
+        const tvInterval = this.dataset.tv;
+        const displayLabel = this.dataset.display;
+
+        // 1. Update top card
+        document.getElementById("current-timeframe").innerText = displayLabel;
+        currentInterval = tvInterval;
+
+        // 2. Re-render chart with selected timeframe
+        renderTradingViewWidget(tvInterval);
+
+        // 3. Update indicators based on latest candles
+        fetchLivePriceAndData();
+    });
+});
 
 /*
 ====================================================
 INDICATOR & SIGNAL CALCULATIONS
 ====================================================
 */
-
 function calculateEMA(prices, period) {
     if (prices.length < period) return null;
     const k = 2 / (period + 1);
@@ -946,7 +606,7 @@ function calculateATR(candles, period = 14) {
     return atr;
 }
 
-function updateTechnicalIndicatorsAndSignals(candles) {
+function updateIndicatorsAndSignals(candles) {
     if (!candles || candles.length < 50) return;
 
     const closePrices = candles.map(c => c.close);
@@ -989,413 +649,68 @@ function updateTechnicalIndicatorsAndSignals(candles) {
     }
 }
 
-
 /*
 ====================================================
-LOAD MARKET DATA
+FETCH DATA AND UPDATE PRICE CARD (EVERY 1 MIN)
 ====================================================
 */
-
-async function loadMarketData() {
-
-    if (isFetching) return;
-    isFetching = true;
-
+async function fetchLivePriceAndData() {
     try {
+        const response = await fetch(`/api/market-candles/?timeframe=${currentInterval}m`);
+        if (!response.ok) throw new Error("HTTP connection failed");
 
-        console.log(
-            "Loading timeframe:",
-            currentTimeframe
-        );
+        const result = await response.json();
+        if (result.candles && result.candles.length > 0) {
+            globalCandles = result.candles;
+            const latestPrice = globalCandles[globalCandles.length - 1].close;
 
+            // Update top card
+            document.getElementById("price").innerText = `$${latestPrice.toFixed(2)}`;
+            document.getElementById("market-status").innerText = "Connected";
 
-        document.getElementById(
-            "data-status"
-        ).innerText =
-            `Loading ${currentTimeframe} market data...`;
-
-
-        /*
-        Fetch Django API
-        */
-
-        const response =
-            await fetch(
-                `/api/market-candles/?timeframe=${currentTimeframe}`
-            );
-
-
-        console.log(
-            "API response status:",
-            response.status
-        );
-
-
-        /*
-        Check HTTP response
-        */
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP error: ${response.status}`
-            );
-
+            // Update technical indicators
+            updateIndicatorsAndSignals(globalCandles);
         }
-
-
-        /*
-        Convert response to JSON
-        */
-
-        const result =
-            await response.json();
-
-
-        console.log(
-            "API result:",
-            result
-        );
-
-
-        /*
-        Check API error
-        */
-
-        if (result.error) {
-
-            console.error(
-                "API Error:",
-                result.error
-            );
-
-            document.getElementById(
-                "data-status"
-            ).innerText =
-                "Market data error";
-
-            return;
-
-        }
-
-
-        /*
-        Get candles
-        */
-
-        const candles =
-            result.candles;
-
-
-        /*
-        Check candles
-        */
-
-        if (
-            !candles ||
-            candles.length === 0
-        ) {
-
-            console.warn(
-                "No candles received"
-            );
-
-            document.getElementById(
-                "data-status"
-            ).innerText =
-                "No market data available";
-
-            return;
-
-        }
-
-
-        /*
-        Put candles into chart
-        */
-
-        candleSeries.setData(
-            candles
-        );
-
-
-        /*
-        Latest candle
-        */
-
-        const latest =
-            candles[
-                candles.length - 1
-            ];
-
-
-        /*
-        Current price
-        */
-
-        const price =
-            latest.close;
-
-
-        document.getElementById(
-            "price"
-        ).innerText =
-            `$${price.toFixed(2)}`;
-
-
-        /*
-        Current timeframe
-        */
-
-        document.getElementById(
-            "current-timeframe"
-        ).innerText =
-            currentTimeframe;
-
-
-        /*
-        Connection status
-        */
-
-        document.getElementById(
-            "market-status"
-        ).innerText =
-            "Connected";
-
-
-        /*
-        Status message
-        */
-
-        document.getElementById(
-            "data-status"
-        ).innerText =
-            `${candles.length} candles loaded • ${currentTimeframe}`;
-
-
-        /*
-        Update Technical Indicators & Signals
-        */
-
-        updateTechnicalIndicatorsAndSignals(candles);
-
-
-        console.log(
-            `${result.symbol} ${result.timeframe} candles loaded`
-        );
-
+    } catch (error) {
+        console.error("Data Fetch Error:", error);
+        document.getElementById("market-status").innerText = "Disconnected";
     }
-
-    catch (error) {
-
-        console.error(
-            "Market data error:",
-            error
-        );
-
-
-        document.getElementById(
-            "market-status"
-        ).innerText =
-            "Disconnected";
-
-
-        document.getElementById(
-            "data-status"
-        ).innerText =
-            "Unable to load market data";
-
-    }
-
-    finally {
-
-        isFetching = false;
-
-    }
-
 }
 
-
 /*
 ====================================================
-TIMEFRAME BUTTONS
+UI HELPERS & BUTTON ACTIONS
 ====================================================
 */
-
-document
-    .querySelectorAll(
-        ".timeframe-btn"
-    )
-    .forEach(button => {
-
-
-        button.addEventListener(
-            "click",
-            function () {
-
-
-                /*
-                IMPORTANT DEBUG MESSAGE
-                */
-
-                console.log(
-                    "TIMEFRAME CLICKED:",
-                    this.dataset.timeframe
-                );
-
-
-                /*
-                Remove active
-                from all buttons
-                */
-
-                document
-                    .querySelectorAll(
-                        ".timeframe-btn"
-                    )
-                    .forEach(btn => {
-
-                        btn.classList.remove(
-                            "active"
-                        );
-
-                    });
-
-
-                /*
-                Add active to
-                clicked button
-                */
-
-                this.classList.add(
-                    "active"
-                );
-
-
-                /*
-                Get selected timeframe
-                */
-
-                currentTimeframe =
-                    this.dataset.timeframe;
-
-
-                console.log(
-                    "Current timeframe changed to:",
-                    currentTimeframe
-                );
-
-
-                /*
-                Load new market data
-                */
-
-                loadMarketData();
-
-            }
-
-        );
-
-    });
-
-
-/*
-====================================================
-THEME TOGGLE
-====================================================
-*/
-
 function toggleTheme() {
-
-    document.body
-        .classList
-        .toggle("light");
-
+    document.body.classList.toggle("light");
+    renderTradingViewWidget(currentInterval);
 }
-
-
-/*
-====================================================
-BUY BUTTON
-====================================================
-*/
 
 function buyTrade() {
-
-    console.log(
-        "BUY button clicked"
-    );
-
-    alert(
-        "BUY functionality will be connected to MT5 after the Windows VPS integration."
-    );
-
+    alert("BUY order placed! (Connecting to MT5)");
 }
-
-
-/*
-====================================================
-SELL BUTTON
-====================================================
-*/
 
 function sellTrade() {
-
-    console.log(
-        "SELL button clicked"
-    );
-
-    alert(
-        "SELL functionality will be connected to MT5 after the Windows VPS integration."
-    );
-
+    alert("SELL order placed! (Connecting to MT5)");
 }
 
-
 /*
 ====================================================
-WINDOW RESIZE
+INITIALIZATION
 ====================================================
 */
+document.addEventListener("DOMContentLoaded", function () {
+    // Render initial chart
+    renderTradingViewWidget("15");
 
-window.addEventListener(
-    "resize",
-    function () {
-
-        chart.applyOptions({
-
-            width:
-                chartContainer.clientWidth
-
-        });
-
-    }
-);
-
-
-/*
-====================================================
-INITIAL LOAD & REAL-TIME POLLING
-====================================================
-*/
-
-console.log(
-    "Forex Dashboard Started"
-);
-
-
-loadMarketData().then(() => {
-    chart.timeScale().fitContent();
+    // Load market prices and start polling
+    fetchLivePriceAndData();
+    
+    // Poll every 1 minute (60,000 ms)
+    setInterval(fetchLivePriceAndData, 60000);
 });
-
-
-/*
-Auto Refresh every 3 seconds for live ticker updates
-*/
-setInterval(loadMarketData, 15000);
-
 </script>
-
 
 </body>
 
