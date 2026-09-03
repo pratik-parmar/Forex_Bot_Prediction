@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Forex Trading Dashboard</title>
+
+    <!-- Lightweight Charts -->
+    <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #0f1117;
+            color: #ffffff;
+            transition: 0.3s;
+        }
+
+        body.light {
+            background: #f4f5f7;
+            color: #111111;
+        }
+
+        /* Layout */
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+
+        .sidebar {
+            width: 230px;
+            background: #151821;
+            border-right: 1px solid #292d36;
+            padding: 25px 15px;
+        }
+
+        .logo {
+            font-size: 22px;
+            font-weight: bold;
+            margin-bottom: 35px;
+            padding-left: 10px;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .menu button {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            padding: 13px;
+            text-align: left;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .menu button:hover {
+            background: #242832;
+            color: white;
+        }
+
+        .menu button.active {
+            background: #242832;
+            color: white;
+        }
+
+        /* Main */
+
+        .main {
+            flex: 1;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .connection {
+            font-size: 13px;
+            color: #26a69a;
+        }
+
+        .theme-btn {
+            border: 1px solid #333842;
+            background: #151821;
+            color: white;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* Stats */
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 8px;
+            padding: 18px;
+        }
+
+        .card-title {
+            color: #8c919c;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .card-value {
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        /* Chart */
+
+        .chart-card {
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .symbol {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .timeframes {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .timeframe-btn {
+            border: 1px solid #333842;
+            background: #1b1e26;
+            color: #aaa;
+            padding: 7px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .timeframe-btn:hover {
+            background: #292d36;
+            color: white;
+        }
+
+        .timeframe-btn.active {
+            background: #ffffff;
+            color: #111111;
+        }
+
+        #chart {
+            width: 100%;
+            height: 500px;
+        }
+
+        #data-status {
+            margin-top: 10px;
+            color: #8c919c;
+            font-size: 12px;
+        }
+
+        /* Bottom panels */
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .panel h3 {
+            margin-bottom: 18px;
+        }
+
+        .indicator {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #292d36;
+        }
+
+        .indicator:last-child {
+            border-bottom: none;
+        }
+
+        .indicator-label {
+            color: #8c919c;
+        }
+
+        /* Signal */
+
+        .signal-box {
+            padding: 15px;
+            border-radius: 7px;
+            background: #1c2029;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #signal {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        /* Trade */
+
+        .trade-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #292d36;
+        }
+
+        .trade-row span:first-child {
+            color: #8c919c;
+        }
+
+        .trade-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .buy-btn,
+        .sell-btn {
+            flex: 1;
+            padding: 13px;
+            border: none;
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .buy-btn {
+            background: #26a69a;
+        }
+
+        .sell-btn {
+            background: #ef5350;
+        }
+
+        .buy-btn:hover {
+            opacity: 0.85;
+        }
+
+        .sell-btn:hover {
+            opacity: 0.85;
+        }
+
+        /* Light mode */
+
+        body.light .sidebar,
+        body.light .card,
+        body.light .chart-card,
+        body.light .panel {
+            background: white;
+            border-color: #ddd;
+        }
+
+        body.light .theme-btn {
+            background: white;
+            color: #111;
+            border-color: #ddd;
+        }
+
+        body.light .timeframe-btn {
+            background: #f5f5f5;
+            color: #555;
+            border-color: #ddd;
+        }
+
+        body.light .timeframe-btn.active {
+            background: #111;
+            color: white;
+        }
+
+        body.light .signal-box {
+            background: #f3f3f3;
+        }
+
+        /* Responsive */
+
+        @media (max-width: 1000px) {
+
+            .sidebar {
+                width: 180px;
+            }
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+        }
+
+        @media (max-width: 700px) {
+
+            .app {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                width: 100%;
+                border-right: none;
+                border-bottom: 1px solid #292d36;
+            }
+
+            .menu {
+                flex-direction: row;
+                overflow-x: auto;
+            }
+
+            .main {
+                padding: 12px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #chart {
+                height: 400px;
+            }
+
+            .chart-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+            }
+
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- Sidebar -->
+
+    <aside class="sidebar">
+
+        <div class="logo">
+            Forex Terminal
+        </div>
+
+        <div class="menu">
+
+            <button class="active">
+                Dashboard
+            </button>
+
+            <button>
+                Markets
+            </button>
+
+            <button>
+                Signals
+            </button>
+
+            <button>
+                Trades
+            </button>
+
+            <button>
+                Settings
+            </button>
+
+        </div>
+
+    </aside>
+
+
+    <!-- Main -->
+
+    <main class="main">
+
+        <!-- Header -->
+
+        <div class="header">
+
+            <h1>
+                Trading Dashboard
+            </h1>
+
+            <div class="header-right">
+
+                <span
+                    class="connection"
+                    id="market-status">
+                    Connecting...
+                </span>
+
+                <button
+                    class="theme-btn"
+                    onclick="toggleTheme()">
+                    Toggle Theme
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- Statistics -->
+
+        <div class="stats">
+
+            <div class="card">
+
+                <div class="card-title">
+                    ACCOUNT BALANCE
+                </div>
+
+                <div
+                    class="card-value"
+                    id="balance">
+                    $150.00
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-title">
+                    XAUUSD PRICE
+                </div>
+
+                <div
+                    class="card-value"
+                    id="price">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-title">
+                    TIMEFRAME
+                </div>
+
+                <div
+                    class="card-value"
+                    id="current-timeframe">
+                    15m
+                </div>
+
+            </div>
+
+
+            <div class="card">
+
+                <div class="card-title">
+                    MAX RISK
+                </div>
+
+                <div class="card-value">
+                    $1.50
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- Chart -->
+
+        <div class="chart-card">
+
+            <div class="chart-header">
+
+                <div>
+
+                    <div class="symbol">
+                        XAUUSD
+                    </div>
+
+                    <small>
+                        Gold / US Dollar
+                    </small>
+
+                </div>
+
+
+                <div class="timeframes">
+
+                    <button
+                        class="timeframe-btn"
+                        data-timeframe="1m">
+                        1m
+                    </button>
+
+                    <button
+                        class="timeframe-btn"
+                        data-timeframe="5m">
+                        5m
+                    </button>
+
+                    <button
+                        class="timeframe-btn active"
+                        data-timeframe="15m">
+                        15m
+                    </button>
+
+                    <button
+                        class="timeframe-btn"
+                        data-timeframe="30m">
+                        30m
+                    </button>
+
+                    <button
+                        class="timeframe-btn"
+                        data-timeframe="1h">
+                        1H
+                    </button>
+
+                    <button
+                        class="timeframe-btn"
+                        data-timeframe="4h">
+                        4H
+                    </button>
+
+                    <button
+                        class="timeframe-btn"
+                        data-timeframe="1d">
+                        1D
+                    </button>
+
+                </div>
+
+            </div>
+
+
+            <div id="chart"></div>
+
+            <div id="data-status">
+                Loading market data...
+            </div>
+
+        </div>
+
+
+        <!-- Bottom panels -->
+
+        <div class="bottom-grid">
+
+
+            <!-- Indicators -->
+
+            <div class="panel">
+
+                <h3>
+                    Technical Indicators
+                </h3>
+
+
+                <div class="indicator">
+
+                    <span class="indicator-label">
+                        EMA 20
+                    </span>
+
+                    <span id="ema20">
+                        --
+                    </span>
+
+                </div>
+
+
+                <div class="indicator">
+
+                    <span class="indicator-label">
+                        EMA 50
+                    </span>
+
+                    <span id="ema50">
+                        --
+                    </span>
+
+                </div>
+
+
+                <div class="indicator">
+
+                    <span class="indicator-label">
+                        RSI 14
+                    </span>
+
+                    <span id="rsi">
+                        --
+                    </span>
+
+                </div>
+
+
+                <div class="indicator">
+
+                    <span class="indicator-label">
+                        ATR 14
+                    </span>
+
+                    <span id="atr">
+                        --
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <!-- Trading signal -->
+
+            <div class="panel">
+
+                <h3>
+                    Trading Signal
+                </h3>
+
+
+                <div class="signal-box">
+
+                    <div id="signal">
+                        HOLD
+                    </div>
+
+                </div>
+
+
+                <div class="trade-row">
+
+                    <span>
+                        Entry
+                    </span>
+
+                    <span id="entry">
+                        --
+                    </span>
+
+                </div>
+
+
+                <div class="trade-row">
+
+                    <span>
+                        Stop Loss
+                    </span>
+
+                    <span id="stop-loss">
+                        --
+                    </span>
+
+                </div>
+
+
+                <div class="trade-row">
+
+                    <span>
+                        Take Profit
+                    </span>
+
+                    <span id="take-profit">
+                        --
+                    </span>
+
+                </div>
+
+
+                <div class="trade-buttons">
+
+                    <button
+                        class="buy-btn"
+                        onclick="buyTrade()">
+                        BUY
+                    </button>
+
+                    <button
+                        class="sell-btn"
+                        onclick="sellTrade()">
+                        SELL
+                    </button>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+</div>
+
+
+<script>
+
+/*
+====================================================
+GLOBAL VARIABLES
+====================================================
+*/
+
+let currentTimeframe = "15m";
+
+
+/*
+====================================================
+CHART CONTAINER
+====================================================
+*/
+
+const chartContainer =
+    document.getElementById("chart");
+
+
+/*
+====================================================
+CREATE CHART
+====================================================
+*/
+
+const chart =
+    LightweightCharts.createChart(
+        chartContainer,
+        {
+            layout: {
+                background: {
+                    color: "#151821"
+                },
+
+                textColor: "#AAAAAA"
+            },
+
+            grid: {
+                vertLines: {
+                    color: "#242832"
+                },
+
+                horzLines: {
+                    color: "#242832"
+                }
+            },
+
+            crosshair: {
+                mode:
+                    LightweightCharts.CrosshairMode.Normal
+            },
+
+            rightPriceScale: {
+                borderColor: "#333842",
+
+                autoScale: true
+            },
+
+            timeScale: {
+
+                borderColor: "#333842",
+
+                timeVisible: true,
+
+                secondsVisible: false,
+
+                rightOffset: 5,
+
+                barSpacing: 8,
+
+                minBarSpacing: 2,
+
+                fixLeftEdge: false,
+
+                fixRightEdge: false
+
+            },
+
+            handleScroll: {
+
+                mouseWheel: true,
+
+                pressedMouseMove: true,
+
+                horzTouchDrag: true,
+
+                vertTouchDrag: true
+
+            },
+
+            handleScale: {
+
+                mouseWheel: true,
+
+                pinch: true,
+
+                axisPressedMouseMove: true
+
+            }
+
+        }
+    );
+
+
+/*
+====================================================
+CANDLESTICK SERIES
+====================================================
+*/
+
+const candleSeries =
+    chart.addCandlestickSeries({
+
+        upColor: "#26a69a",
+
+        downColor: "#ef5350",
+
+        borderVisible: false,
+
+        wickUpColor: "#26a69a",
+
+        wickDownColor: "#ef5350"
+
+    });
+
+
+/*
+====================================================
+LOAD MARKET DATA
+====================================================
+*/
+
+async function loadMarketData() {
+
+    try {
+
+        console.log(
+            "Loading timeframe:",
+            currentTimeframe
+        );
+
+
+        document.getElementById(
+            "data-status"
+        ).innerText =
+            `Loading ${currentTimeframe} market data...`;
+
+
+        /*
+        Fetch Django API
+        */
+
+        const response =
+            await fetch(
+                `/api/market-candles/?timeframe=${currentTimeframe}`
+            );
+
+
+        console.log(
+            "API response status:",
+            response.status
+        );
+
+
+        /*
+        Check HTTP response
+        */
+
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP error: ${response.status}`
+            );
+
+        }
+
+
+        /*
+        Convert response to JSON
+        */
+
+        const result =
+            await response.json();
+
+
+        console.log(
+            "API result:",
+            result
+        );
+
+
+        /*
+        Check API error
+        */
+
+        if (result.error) {
+
+            console.error(
+                "API Error:",
+                result.error
+            );
+
+            document.getElementById(
+                "data-status"
+            ).innerText =
+                "Market data error";
+
+            return;
+
+        }
+
+
+        /*
+        Get candles
+        */
+
+        const candles =
+            result.candles;
+
+
+        /*
+        Check candles
+        */
+
+        if (
+            !candles ||
+            candles.length === 0
+        ) {
+
+            console.warn(
+                "No candles received"
+            );
+
+            document.getElementById(
+                "data-status"
+            ).innerText =
+                "No market data available";
+
+            return;
+
+        }
+
+
+        /*
+        Put candles into chart
+        */
+
+        candleSeries.setData(
+            candles
+        );
+
+
+        /*
+        Fit chart
+        */
+
+        chart
+            .timeScale()
+            .fitContent();
+
+
+        /*
+        Latest candle
+        */
+
+        const latest =
+            candles[
+                candles.length - 1
+            ];
+
+
+        /*
+        Current price
+        */
+
+        const price =
+            latest.close;
+
+
+        document.getElementById(
+            "price"
+        ).innerText =
+            price.toFixed(2);
+
+
+        /*
+        Current timeframe
+        */
+
+        document.getElementById(
+            "current-timeframe"
+        ).innerText =
+            currentTimeframe;
+
+
+        /*
+        Connection status
+        */
+
+        document.getElementById(
+            "market-status"
+        ).innerText =
+            "Connected";
+
+
+        /*
+        Status message
+        */
+
+        document.getElementById(
+            "data-status"
+        ).innerText =
+            `${candles.length} candles loaded • ${currentTimeframe}`;
+
+
+        console.log(
+            `${result.symbol} ${result.timeframe} candles loaded`
+        );
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Market data error:",
+            error
+        );
+
+
+        document.getElementById(
+            "market-status"
+        ).innerText =
+            "Disconnected";
+
+
+        document.getElementById(
+            "data-status"
+        ).innerText =
+            "Unable to load market data";
+
+    }
+
+}
+
+
+/*
+====================================================
+TIMEFRAME BUTTONS
+====================================================
+*/
+
+document
+    .querySelectorAll(
+        ".timeframe-btn"
+    )
+    .forEach(button => {
+
+
+        button.addEventListener(
+            "click",
+            function () {
+
+
+                /*
+                IMPORTANT DEBUG MESSAGE
+                */
+
+                console.log(
+                    "TIMEFRAME CLICKED:",
+                    this.dataset.timeframe
+                );
+
+
+                /*
+                Remove active
+                from all buttons
+                */
+
+                document
+                    .querySelectorAll(
+                        ".timeframe-btn"
+                    )
+                    .forEach(btn => {
+
+                        btn.classList.remove(
+                            "active"
+                        );
+
+                    });
+
+
+                /*
+                Add active to
+                clicked button
+                */
+
+                this.classList.add(
+                    "active"
+                );
+
+
+                /*
+                Get selected timeframe
+                */
+
+                currentTimeframe =
+                    this.dataset.timeframe;
+
+
+                console.log(
+                    "Current timeframe changed to:",
+                    currentTimeframe
+                );
+
+
+                /*
+                Load new market data
+                */
+
+                loadMarketData();
+
+            }
+
+        );
+
+    });
+
+
+/*
+====================================================
+THEME TOGGLE
+====================================================
+*/
+
+function toggleTheme() {
+
+    document.body
+        .classList
+        .toggle("light");
+
+}
+
+
+/*
+====================================================
+BUY BUTTON
+====================================================
+*/
+
+function buyTrade() {
+
+    console.log(
+        "BUY button clicked"
+    );
+
+    alert(
+        "BUY functionality will be connected to MT5 after the Windows VPS integration."
+    );
+
+}
+
+
+/*
+====================================================
+SELL BUTTON
+====================================================
+*/
+
+function sellTrade() {
+
+    console.log(
+        "SELL button clicked"
+    );
+
+    alert(
+        "SELL functionality will be connected to MT5 after the Windows VPS integration."
+    );
+
+}
+
+
+/*
+====================================================
+WINDOW RESIZE
+====================================================
+*/
+
+window.addEventListener(
+    "resize",
+    function () {
+
+        chart.applyOptions({
+
+            width:
+                chartContainer.clientWidth
+
+        });
+
+    }
+);
+
+
+/*
+====================================================
+INITIAL LOAD
+====================================================
+*/
+
+console.log(
+    "Forex Dashboard Started"
+);
+
+
+loadMarketData();
+
+
+/*
+====================================================
+AUTO REFRESH
+====================================================
+*/
+
+setInterval(
+    loadMarketData,
+    60000
+);
+
+</script>
+
+
+</body>
+
+</html>
