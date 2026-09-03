@@ -1,10 +1,8 @@
 from django.urls import path
-
-from .views import dashboard
+from . import views
 from .market_api import market_candles
 
-
 urlpatterns = [
-    path("", dashboard, name="dashboard"),
-    path("api/market-candles/", market_candles, name="market_candles"),
+    path('', views.index, name='index'),
+    path('api/market-candles/', market_candles, name='market_candles'),
 ]

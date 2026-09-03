@@ -762,6 +762,7 @@ GLOBAL VARIABLES
 */
 
 let currentTimeframe = "15m";
+let isFetching = false;
 
 
 /*
@@ -883,11 +884,122 @@ const candleSeries =
 
 /*
 ====================================================
+INDICATOR & SIGNAL CALCULATIONS
+====================================================
+*/
+
+function calculateEMA(prices, period) {
+    if (prices.length < period) return null;
+    const k = 2 / (period + 1);
+    let ema = prices.slice(0, period).reduce((acc, val) => acc + val, 0) / period;
+    for (let i = period; i < prices.length; i++) {
+        ema = (prices[i] * k) + (ema * (1 - k));
+    }
+    return ema;
+}
+
+function calculateRSI(prices, period = 14) {
+    if (prices.length <= period) return null;
+    let gains = 0;
+    let losses = 0;
+    for (let i = 1; i <= period; i++) {
+        const diff = prices[i] - prices[i - 1];
+        if (diff >= 0) gains += diff;
+        else losses -= diff;
+    }
+    let avgGain = gains / period;
+    let avgLoss = losses / period;
+
+    for (let i = period + 1; i < prices.length; i++) {
+        const diff = prices[i] - prices[i - 1];
+        if (diff >= 0) {
+            avgGain = (avgGain * (period - 1) + diff) / period;
+            avgLoss = (avgLoss * (period - 1)) / period;
+        } else {
+            avgGain = (avgGain * (period - 1)) / period;
+            avgLoss = (avgLoss * (period - 1) - diff) / period;
+        }
+    }
+    if (avgLoss === 0) return 100;
+    const rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+}
+
+function calculateATR(candles, period = 14) {
+    if (candles.length <= period) return null;
+    let trs = [];
+    for (let i = 1; i < candles.length; i++) {
+        const high = candles[i].high;
+        const low = candles[i].low;
+        const prevClose = candles[i - 1].close;
+        const tr = Math.max(
+            high - low,
+            Math.abs(high - prevClose),
+            Math.abs(low - prevClose)
+        );
+        trs.push(tr);
+    }
+    let atr = trs.slice(0, period).reduce((acc, val) => acc + val, 0) / period;
+    for (let i = period; i < trs.length; i++) {
+        atr = (atr * (period - 1) + trs[i]) / period;
+    }
+    return atr;
+}
+
+function updateTechnicalIndicatorsAndSignals(candles) {
+    if (!candles || candles.length < 50) return;
+
+    const closePrices = candles.map(c => c.close);
+    const ema20 = calculateEMA(closePrices, 20);
+    const ema50 = calculateEMA(closePrices, 50);
+    const rsi = calculateRSI(closePrices, 14);
+    const atr = calculateATR(candles, 14);
+
+    if (ema20 !== null) document.getElementById("ema20").innerText = `$${ema20.toFixed(2)}`;
+    if (ema50 !== null) document.getElementById("ema50").innerText = `$${ema50.toFixed(2)}`;
+    if (rsi !== null) document.getElementById("rsi").innerText = rsi.toFixed(2);
+    if (atr !== null) document.getElementById("atr").innerText = `$${atr.toFixed(2)}`;
+
+    const currentPrice = closePrices[closePrices.length - 1];
+    const signalElem = document.getElementById("signal");
+    const entryElem = document.getElementById("entry");
+    const slElem = document.getElementById("stop-loss");
+    const tpElem = document.getElementById("take-profit");
+
+    const atrValue = atr || 2.5;
+
+    if (ema20 > ema50 && rsi > 50 && rsi < 70) {
+        signalElem.innerText = "BUY";
+        signalElem.style.color = "#26a69a";
+        entryElem.innerText = `$${currentPrice.toFixed(2)}`;
+        slElem.innerText = `$${(currentPrice - (atrValue * 1.5)).toFixed(2)}`;
+        tpElem.innerText = `$${(currentPrice + (atrValue * 3.0)).toFixed(2)}`;
+    } else if (ema20 < ema50 && rsi < 50 && rsi > 30) {
+        signalElem.innerText = "SELL";
+        signalElem.style.color = "#ef5350";
+        entryElem.innerText = `$${currentPrice.toFixed(2)}`;
+        slElem.innerText = `$${(currentPrice + (atrValue * 1.5)).toFixed(2)}`;
+        tpElem.innerText = `$${(currentPrice - (atrValue * 3.0)).toFixed(2)}`;
+    } else {
+        signalElem.innerText = "HOLD";
+        signalElem.style.color = "#8c919c";
+        entryElem.innerText = "--";
+        slElem.innerText = "--";
+        tpElem.innerText = "--";
+    }
+}
+
+
+/*
+====================================================
 LOAD MARKET DATA
 ====================================================
 */
 
 async function loadMarketData() {
+
+    if (isFetching) return;
+    isFetching = true;
 
     try {
 
@@ -1008,15 +1120,6 @@ async function loadMarketData() {
 
 
         /*
-        Fit chart
-        */
-
-        chart
-            .timeScale()
-            .fitContent();
-
-
-        /*
         Latest candle
         */
 
@@ -1037,7 +1140,7 @@ async function loadMarketData() {
         document.getElementById(
             "price"
         ).innerText =
-            price.toFixed(2);
+            `$${price.toFixed(2)}`;
 
 
         /*
@@ -1070,6 +1173,13 @@ async function loadMarketData() {
             `${candles.length} candles loaded • ${currentTimeframe}`;
 
 
+        /*
+        Update Technical Indicators & Signals
+        */
+
+        updateTechnicalIndicatorsAndSignals(candles);
+
+
         console.log(
             `${result.symbol} ${result.timeframe} candles loaded`
         );
@@ -1094,6 +1204,12 @@ async function loadMarketData() {
             "data-status"
         ).innerText =
             "Unable to load market data";
+
+    }
+
+    finally {
+
+        isFetching = false;
 
     }
 
@@ -1259,7 +1375,7 @@ window.addEventListener(
 
 /*
 ====================================================
-INITIAL LOAD
+INITIAL LOAD & REAL-TIME POLLING
 ====================================================
 */
 
@@ -1268,19 +1384,15 @@ console.log(
 );
 
 
-loadMarketData();
+loadMarketData().then(() => {
+    chart.timeScale().fitContent();
+});
 
 
 /*
-====================================================
-AUTO REFRESH
-====================================================
+Auto Refresh every 3 seconds for live ticker updates
 */
-
-setInterval(
-    loadMarketData,
-    60000
-);
+setInterval(loadMarketData, 15000);
 
 </script>
 
