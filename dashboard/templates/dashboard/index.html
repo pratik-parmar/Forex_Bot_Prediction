@@ -6,6 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forex Trading Dashboard - Compact & Responsive</title>
 
+    <!-- Google Identity Services Library -->
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
     <style>
         * {
             margin: 0;
@@ -131,6 +134,13 @@
             align-items: center;
             justify-content: center;
             padding: 0;
+            overflow: hidden;
+        }
+
+        .profile-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         /* TradingView Interactive Symbol Search Trigger Bar */
@@ -335,7 +345,8 @@
         .sell-btn { background: #ef5350; }
 
         /* TradingView Exact Style Symbol Search Modal */
-        .tv-search-modal-overlay {
+        .tv-search-modal-overlay,
+        .auth-modal-overlay {
             display: none;
             position: fixed;
             top: 0;
@@ -348,7 +359,8 @@
             justify-content: center;
         }
 
-        .tv-search-modal-overlay.active {
+        .tv-search-modal-overlay.active,
+        .auth-modal-overlay.active {
             display: flex;
         }
 
@@ -470,13 +482,135 @@
         .fund-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #2a2e39; padding-top: 6px; }
         .fund-metric-label { color: #8c919c; font-size: 9px; }
 
+        /* ========================================================= */
+        /* AUTH MODAL STYLES (Sign In, Sign Up, Google)             */
+        /* ========================================================= */
+        .auth-dialog {
+            background: #1a1e29;
+            border: 1px solid #2a2e39;
+            width: 400px;
+            max-width: 90vw;
+            border-radius: 8px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.7);
+            padding: 24px;
+            position: relative;
+            color: #d1d4dc;
+        }
+
+        .auth-dialog .auth-close {
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: #787b86;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .auth-tabs {
+            display: flex;
+            border-bottom: 1px solid #2a2e39;
+            margin-bottom: 20px;
+        }
+
+        .auth-tab-btn {
+            flex: 1;
+            padding: 10px 0;
+            background: none;
+            border: none;
+            color: #787b86;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .auth-tab-btn.active {
+            color: #2962ff;
+            border-bottom-color: #2962ff;
+        }
+
+        .auth-form-group {
+            margin-bottom: 14px;
+        }
+
+        .auth-form-group label {
+            display: block;
+            font-size: 11px;
+            color: #8c919c;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+        }
+
+        .auth-form-group input {
+            width: 100%;
+            background: #131722;
+            border: 1px solid #2a2e39;
+            border-radius: 4px;
+            padding: 8px 10px;
+            color: #fff;
+            font-size: 13px;
+            outline: none;
+        }
+
+        .auth-form-group input:focus {
+            border-color: #2962ff;
+        }
+
+        .auth-submit-btn {
+            width: 100%;
+            padding: 10px;
+            background: #2962ff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 5px;
+        }
+
+        .auth-submit-btn:hover {
+            background: #1e51db;
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            text-align: center;
+            margin: 18px 0;
+            color: #787b86;
+            font-size: 11px;
+        }
+
+        .auth-divider::before, .auth-divider::after {
+            content: '';
+            flex: 1;
+            border-bottom: 1px solid #2a2e39;
+        }
+
+        .auth-divider span {
+            padding: 0 8px;
+        }
+
+        .google-btn-container {
+            display: flex;
+            justify-content: center;
+            min-height: 40px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
         /* Light mode adjustments */
         body.light .sidebar, body.light .card, body.light .chart-card, body.light .panel { background: white; border-color: #ddd; }
         body.light .theme-btn, body.light .profile-btn { background: white; color: #111; border-color: #ddd; }
         body.light .symbol-search-trigger { background: #f0f3fa; border-color: #d1d4dc; color: #111; }
-        body.light .tv-search-dialog { background: #ffffff; border-color: #d1d4dc; color: #111; }
-        body.light .tv-search-header, body.light .tv-filters-bar, body.light .tv-result-item { border-color: #e0e3eb; }
-        body.light .tv-search-input-box { color: #111; }
+        body.light .tv-search-dialog, body.light .auth-dialog { background: #ffffff; border-color: #d1d4dc; color: #111; }
+        body.light .tv-search-header, body.light .tv-filters-bar, body.light .tv-result-item, body.light .auth-tabs { border-color: #e0e3eb; }
+        body.light .tv-search-input-box, body.light .auth-form-group input { color: #111; background: #f4f5f7; border-color: #d1d4dc; }
         body.light .tv-result-item:hover { background: #f0f3fa; }
         body.light .tv-res-symbol { color: #111; }
         body.light .card-value, body.light .live-price-num { color: #111; }
@@ -523,7 +657,7 @@
             <div class="header-right">
                 <span class="connection" id="market-status">Connected</span>
                 <button class="theme-btn" onclick="toggleTheme()">Theme</button>
-                <button class="profile-btn" onclick="alert('Profile Settings')">
+                <button class="profile-btn" id="profileBtn" onclick="openAuthModal()">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </button>
             </div>
@@ -666,6 +800,7 @@
 
 </div>
 
+<!-- TradingView Symbol Search Modal -->
 <div class="tv-search-modal-overlay" id="tvSearchModal" onclick="handleModalBackdropClick(event)">
     <div class="tv-search-dialog">
         <div class="tv-search-header">
@@ -684,6 +819,70 @@
         </div>
 
         <div class="tv-results-list" id="tvResultsList"></div>
+    </div>
+</div>
+
+<!-- Authentication Modal (Sign In, Sign Up, Google) -->
+<div class="auth-modal-overlay" id="authModal" onclick="handleAuthModalBackdropClick(event)">
+    <div class="auth-dialog">
+        <button class="auth-close" onclick="closeAuthModal()">&times;</button>
+
+        <!-- Tabs -->
+        <div class="auth-tabs">
+            <button class="auth-tab-btn active" id="tab-btn-signin" onclick="switchAuthTab('signin')">Sign In</button>
+            <button class="auth-tab-btn" id="tab-btn-signup" onclick="switchAuthTab('signup')">Sign Up</button>
+        </div>
+
+        <!-- Sign In Form -->
+        <form id="auth-form-signin" onsubmit="handleAuthSubmit(event, 'Sign In')">
+            <div class="auth-form-group">
+                <label for="signin-email">Email</label>
+                <input type="email" id="signin-email" placeholder="name@example.com" required>
+            </div>
+            <div class="auth-form-group">
+                <label for="signin-password">Password</label>
+                <input type="password" id="signin-password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="auth-submit-btn">Sign In</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="auth-form-signup" class="hidden" onsubmit="handleAuthSubmit(event, 'Sign Up')">
+            <div class="auth-form-group">
+                <label for="signup-name">Full Name</label>
+                <input type="text" id="signup-name" placeholder="John Doe" required>
+            </div>
+            <div class="auth-form-group">
+                <label for="signup-email">Email</label>
+                <input type="email" id="signup-email" placeholder="name@example.com" required>
+            </div>
+            <div class="auth-form-group">
+                <label for="signup-password">Password</label>
+                <input type="password" id="signup-password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="auth-submit-btn">Create Account</button>
+        </form>
+
+        <div class="auth-divider">
+            <span>OR</span>
+        </div>
+
+        <!-- Google Sign In Button -->
+        <div class="google-btn-container">
+            <div id="g_id_onload"
+                 data-client_id="YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"
+                 data-callback="handleGoogleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+            <div class="g_id_signin"
+                 data-type="standard"
+                 data-size="medium"
+                 data-theme="filled_blue"
+                 data-text="continue_with"
+                 data-shape="rectangular"
+                 data-logo_alignment="left">
+            </div>
+        </div>
     </div>
 </div>
 
@@ -801,7 +1000,6 @@ function renderLivePriceCard() {
     }
 }
 
-// Simulates live real-time price ticks seamlessly inside the uniform card layout
 function startLiveTickerSimulation() {
     if (livePriceInterval) clearInterval(livePriceInterval);
     livePriceInterval = setInterval(() => {
@@ -833,10 +1031,8 @@ function updateChartWidget() {
         "theme": isLight ? "light" : "dark",
         "style": "1",
         "locale": "en",
-        "toolbar_bg": isLight ? "#f1f3f6" : "#1e222d",
         "enable_publishing": false,
-        "hide_top_toolbar": false,
-        "hide_legend": false,
+        "allow_symbol_change": true,
         "container_id": "tradingview_chart"
     });
 }
@@ -846,10 +1042,74 @@ function toggleTheme() {
     updateChartWidget();
 }
 
+/* ========================================================= */
+/* AUTHENTICATION MODAL LOGIC                                */
+/* ========================================================= */
+function openAuthModal() {
+    document.getElementById('authModal').classList.add('active');
+}
+
+function closeAuthModal() {
+    document.getElementById('authModal').classList.remove('active');
+}
+
+function handleAuthModalBackdropClick(event) {
+    if (event.target === document.getElementById('authModal')) {
+        closeAuthModal();
+    }
+}
+
+function switchAuthTab(tab) {
+    const signInForm = document.getElementById('auth-form-signin');
+    const signUpForm = document.getElementById('auth-form-signup');
+    const signInBtn = document.getElementById('tab-btn-signin');
+    const signUpBtn = document.getElementById('tab-btn-signup');
+
+    if (tab === 'signin') {
+        signInForm.classList.remove('hidden');
+        signUpForm.classList.add('hidden');
+        signInBtn.classList.add('active');
+        signUpBtn.classList.remove('active');
+    } else {
+        signUpForm.classList.remove('hidden');
+        signInForm.classList.add('hidden');
+        signUpBtn.classList.add('active');
+        signInBtn.classList.remove('active');
+    }
+}
+
+function handleAuthSubmit(event, actionType) {
+    event.preventDefault();
+    alert(`${actionType} successful!`);
+    closeAuthModal();
+}
+
+// Decode Google JWT Token
+function parseJwt(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+}
+
+// Google Sign-In Callback Handler
+function handleGoogleCredentialResponse(response) {
+    const payload = parseJwt(response.credential);
+    alert(`Welcome ${payload.name}! Logged in as ${payload.email}`);
+    
+    // Update profile icon in header with user's Google profile picture
+    if (payload.picture) {
+        const btn = document.getElementById('profileBtn');
+        btn.innerHTML = `<img src="${payload.picture}" alt="Profile">`;
+    }
+
+    closeAuthModal();
+}
+
 document.addEventListener("DOMContentLoaded", function () {
-    renderLivePriceCard();
     updateChartWidget();
-    renderSearchResults(globalAssetDatabase);
     startLiveTickerSimulation();
 });
 </script>

@@ -1,57 +1,24 @@
 import pandas as pd
+import numpy as np
 
+def calculate_sma(series: pd.Series, period: int = 20) -> pd.Series:
+    """Calculates Simple Moving Average."""
+    return series.rolling(window=period).mean()
 
-def calculate_indicators(data):
+def calculate_rsi(series: pd.Series, period: int = 14) -> pd.Series:
+    """Calculates Relative Strength Index (RSI)."""
+    delta = series.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=period).mean()
+    
+    rs = gain / np.where(loss == 0, 1e-10, loss)
+    rsi = 100 - (100 / (1 + rs))
+    return rsi
 
-    df = data.copy()
-
-    # Handle Yahoo Finance multi-level columns
-    if isinstance(df.columns, pd.MultiIndex):
-        df.columns = df.columns.get_level_values(0)
-
-    # Make sure required columns exist
-    required_columns = ["Open", "High", "Low", "Close"]
-
-    for column in required_columns:
-        if column not in df.columns:
-            raise ValueError(f"Missing column: {column}")
-
-    # EMA
-    df["EMA_20"] = df["Close"].ewm(
-        span=20,
-        adjust=False
-    ).mean()
-
-    df["EMA_50"] = df["Close"].ewm(
-        span=50,
-        adjust=False
-    ).mean()
-
-    # RSI
-    delta = df["Close"].diff()
-
-    gain = delta.clip(lower=0)
-    loss = -delta.clip(upper=0)
-
-    average_gain = gain.rolling(14).mean()
-    average_loss = loss.rolling(14).mean()
-
-    rs = average_gain / average_loss
-
-    df["RSI_14"] = 100 - (100 / (1 + rs))
-
-    # ATR
-    previous_close = df["Close"].shift(1)
-
-    true_range = pd.concat(
-        [
-            df["High"] - df["Low"],
-            (df["High"] - previous_close).abs(),
-            (df["Low"] - previous_close).abs()
-        ],
-        axis=1
-    ).max(axis=1)
-
-    df["ATR_14"] = true_range.rolling(14).mean()
-
-    return df
+def calculate_macd(series: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9):
+    """Calculates MACD and Signal line."""
+    ema_fast = series.ewm(span=fast, adjust=False).mean()
+    ema_slow = series.ewm(span=slow, adjust=False).mean()
+    macd_line = ema_fast - ema_slow
+    signal_line = macd_line.ewm(span=signal, adjust=False).mean()
+    return macd_line, signal_line
