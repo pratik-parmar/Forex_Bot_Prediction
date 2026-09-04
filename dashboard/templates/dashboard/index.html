@@ -4,8 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-    <title>Forex Trading Dashboard</title>
+    <title>Forex Trading Dashboard - Compact & Responsive</title>
 
     <style>
         * {
@@ -34,34 +33,36 @@
 
         /* Sidebar */
         .sidebar {
-            width: 230px;
+            width: 220px;
             background: #151821;
             border-right: 1px solid #292d36;
-            padding: 25px 15px;
+            padding: 20px 12px;
+            flex-shrink: 0;
         }
 
         .logo {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: bold;
-            margin-bottom: 35px;
-            padding-left: 10px;
+            margin-bottom: 25px;
+            padding-left: 8px;
         }
 
         .menu {
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 6px;
         }
 
         .menu button {
             background: transparent;
             border: none;
             color: #aaa;
-            padding: 13px;
+            padding: 10px 12px;
             text-align: left;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 14px;
+            font-size: 13px;
+            width: 100%;
         }
 
         .menu button:hover,
@@ -73,8 +74,18 @@
         /* Main */
         .main {
             flex: 1;
-            padding: 20px;
+            padding: 15px;
             overflow-x: hidden;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
         }
 
         /* Header */
@@ -82,296 +93,152 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .header h1 {
-            font-size: 24px;
+            font-size: 20px;
         }
 
         .header-right {
             display: flex;
             align-items: center;
-            gap: 15px;
-            position: relative;
+            gap: 10px;
         }
 
         .connection {
-            font-size: 13px;
+            font-size: 12px;
             color: #26a69a;
         }
 
-        .theme-btn {
+        .theme-btn, .profile-btn {
             border: 1px solid #333842;
             background: #151821;
             color: white;
-            padding: 8px 14px;
+            padding: 6px 10px;
             border-radius: 6px;
             cursor: pointer;
+            font-size: 12px;
         }
 
-        /* Profile / Auth Button */
         .profile-btn {
-            background: #151821;
-            border: 1px solid #333842;
-            color: white;
-            width: 38px;
-            height: 38px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            cursor: pointer;
+            padding: 0;
         }
 
-        .profile-btn:hover {
+        /* TradingView Interactive Symbol Search Trigger Bar */
+        .symbol-search-trigger {
+            background: #1e222d;
+            border: 1px solid #2a2e39;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #d1d4dc;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+        .symbol-search-trigger:hover {
             border-color: #2962ff;
         }
 
-        /* Dropdown Menu (TradingView style) */
-        .auth-dropdown {
-            display: none;
-            position: absolute;
-            top: 50px;
-            right: 0;
-            background: #1e222d;
-            border: 1px solid #2a2e39;
-            border-radius: 8px;
-            width: 220px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-            z-index: 100;
-            overflow: hidden;
-        }
-
-        .auth-dropdown.show {
-            display: block;
-        }
-
-        .auth-dropdown-item {
-            padding: 12px 16px;
-            font-size: 14px;
-            color: #d1d4dc;
-            cursor: pointer;
-            border-bottom: 1px solid #2a2e39;
-            display: block;
-            text-decoration: none;
-        }
-
-        .auth-dropdown-item:last-child {
-            border-bottom: none;
-        }
-
-        .auth-dropdown-item:hover {
-            background: #2a2e39;
-            color: #fff;
-        }
-
-        /* Modal Overlay */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.active {
-            display: flex;
-        }
-
-        .modal-container {
-            background: #1e222d;
-            border: 1px solid #2a2e39;
-            width: 440px;
-            border-radius: 12px;
-            padding: 30px;
-            position: relative;
-            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
-            color: #d1d4dc;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: transparent;
-            border: none;
-            color: #868993;
-            font-size: 20px;
-            cursor: pointer;
-        }
-
-        .modal-close:hover {
-            color: #fff;
-        }
-
-        .modal-title {
-            font-size: 22px;
-            font-weight: bold;
-            margin-bottom: 24px;
-            color: #fff;
-            text-align: center;
-        }
-
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 13px;
-            color: #868993;
-            margin-bottom: 6px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 12px;
-            background: #131722;
-            border: 1px solid #2a2e39;
-            border-radius: 6px;
-            color: #fff;
-            font-size: 14px;
-        }
-
-        .form-input:focus {
-            border-color: #2962ff;
-            outline: none;
-        }
-
-        .auth-submit-btn {
-            width: 100%;
-            padding: 12px;
-            background: #2962ff;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
-        .auth-submit-btn:hover {
-            background: #1e4bd8;
-        }
-
-        .divider {
-            display: flex;
-            align-items: center;
-            text-align: center;
-            margin: 20px 0;
-            color: #868993;
-            font-size: 12px;
-        }
-
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px solid #2a2e39;
-        }
-
-        .divider::before {
-            margin-right: 10px;
-        }
-
-        .divider::after {
-            margin-left: 10px;
-        }
-
-        .social-btn {
-            width: 100%;
-            padding: 11px;
-            background: #131722;
-            border: 1px solid #2a2e39;
-            border-radius: 6px;
-            color: white;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
-
-        .social-btn:hover {
-            background: #2a2e39;
-        }
-
-        .modal-switch {
-            text-align: center;
-            margin-top: 20px;
-            font-size: 13px;
-            color: #868993;
-        }
-
-        .modal-switch a {
-            color: #2962ff;
-            text-decoration: none;
-            cursor: pointer;
-        }
-
-        .modal-switch a:hover {
-            text-decoration: underline;
-        }
-
-        /* Stats */
+        /* Stats - Compact Uniform Sizes */
         .stats {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
+            gap: 10px;
+            margin-bottom: 15px;
         }
 
         .card {
             background: #151821;
             border: 1px solid #292d36;
-            border-radius: 8px;
-            padding: 18px;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 75px;
+            position: relative;
+            overflow: hidden;
         }
 
         .card-title {
             color: #8c919c;
-            font-size: 12px;
-            margin-bottom: 8px;
+            font-size: 10px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .card-value {
-            font-size: 22px;
+            font-size: 16px;
             font-weight: bold;
+            color: #ffffff;
+        }
+
+        /* Clean Live Price Display Layout */
+        .live-price-box {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .live-price-row {
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+        .live-price-num {
+            font-size: 15px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .live-change-num {
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .live-change-num.positive { color: #26a69a; }
+        .live-change-num.negative { color: #ef5350; }
+        .live-subtext {
+            font-size: 9px;
+            color: #787b86;
         }
 
         /* Chart */
         .chart-card {
             background: #151821;
             border: 1px solid #292d36;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 20px;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
         }
 
         .chart-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
         }
 
         .symbol {
-            font-size: 20px;
+            font-size: 16px;
             font-weight: bold;
         }
 
         .timeframes {
             display: flex;
-            gap: 6px;
+            gap: 4px;
             flex-wrap: wrap;
         }
 
@@ -379,15 +246,10 @@
             border: 1px solid #333842;
             background: #1b1e26;
             color: #aaa;
-            padding: 7px 12px;
-            border-radius: 5px;
+            padding: 4px 8px;
+            border-radius: 4px;
             cursor: pointer;
-            font-size: 12px;
-        }
-
-        .timeframe-btn:hover {
-            background: #292d36;
-            color: white;
+            font-size: 11px;
         }
 
         .timeframe-btn.active {
@@ -395,59 +257,57 @@
             color: #111111;
         }
 
-        /* Bottom panels */
+        /* Bottom grids */
         .bottom-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
         }
 
         .panel {
             background: #151821;
             border: 1px solid #292d36;
-            border-radius: 8px;
-            padding: 20px;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
         }
 
         .panel h3 {
-            margin-bottom: 18px;
+            font-size: 14px;
+            margin-bottom: 10px;
         }
 
         .indicator {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
+            padding: 6px 0;
             border-bottom: 1px solid #292d36;
-        }
-
-        .indicator:last-child {
-            border-bottom: none;
+            font-size: 12px;
         }
 
         .indicator-label {
             color: #8c919c;
         }
 
-        /* Signal */
         .signal-box {
-            padding: 15px;
-            border-radius: 7px;
+            padding: 10px;
+            border-radius: 6px;
             background: #1c2029;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
             text-align: center;
         }
 
         #signal {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
         }
 
-        /* Trade */
         .trade-row {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
+            padding: 6px 0;
             border-bottom: 1px solid #292d36;
+            font-size: 12px;
         }
 
         .trade-row span:first-child {
@@ -456,121 +316,186 @@
 
         .trade-buttons {
             display: flex;
-            gap: 10px;
-            margin-top: 20px;
+            gap: 8px;
+            margin-top: 12px;
         }
 
-        .buy-btn,
-        .sell-btn {
+        .buy-btn, .sell-btn {
             flex: 1;
-            padding: 13px;
+            padding: 8px;
             border: none;
-            border-radius: 6px;
+            border-radius: 4px;
             color: white;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             cursor: pointer;
         }
 
-        .buy-btn {
-            background: #26a69a;
+        .buy-btn { background: #26a69a; }
+        .sell-btn { background: #ef5350; }
+
+        /* TradingView Exact Style Symbol Search Modal */
+        .tv-search-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
         }
 
-        .sell-btn {
-            background: #ef5350;
+        .tv-search-modal-overlay.active {
+            display: flex;
         }
 
-        .buy-btn:hover,
-        .sell-btn:hover {
-            opacity: 0.85;
+        .tv-search-dialog {
+            background: #1e222d;
+            border: 1px solid #2a2e39;
+            width: 600px;
+            max-width: 92vw;
+            border-radius: 8px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: #d1d4dc;
+            font-family: Arial, sans-serif;
         }
 
-        /* Light mode overrides */
-        body.light .sidebar,
-        body.light .card,
-        body.light .chart-card,
-        body.light .panel {
-            background: white;
-            border-color: #ddd;
+        .tv-search-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid #2a2e39;
+            display: flex;
+            align-items: center;
+            position: relative;
         }
 
-        body.light .theme-btn,
-        body.light .profile-btn {
-            background: white;
-            color: #111;
-            border-color: #ddd;
+        .tv-search-input-box {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            padding-left: 24px;
         }
 
-        body.light .auth-dropdown {
-            background: white;
-            border-color: #ddd;
+        .tv-search-icon-left {
+            position: absolute;
+            left: 15px;
+            color: #787b86;
         }
 
-        body.light .auth-dropdown-item {
-            color: #333;
-            border-bottom-color: #eee;
+        .tv-search-close {
+            background: transparent;
+            border: none;
+            color: #787b86;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 0 4px;
+        }
+        .tv-search-close:hover { color: #fff; }
+
+        .tv-filters-bar {
+            display: flex;
+            gap: 5px;
+            padding: 8px 15px;
+            border-bottom: 1px solid #2a2e39;
+            overflow-x: auto;
+            background: #181b25;
         }
 
-        body.light .auth-dropdown-item:hover {
-            background: #f5f5f5;
+        .tv-filter-pill {
+            background: #2a2e39;
+            border: none;
+            color: #9db2ce;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            cursor: pointer;
+            white-space: nowrap;
         }
 
-        body.light .timeframe-btn {
-            background: #f5f5f5;
-            color: #555;
-            border-color: #ddd;
+        .tv-filter-pill:hover, .tv-filter-pill.active {
+            background: #2962ff;
+            color: #fff;
         }
 
-        body.light .timeframe-btn.active {
-            background: #111;
-            color: white;
+        .tv-results-list {
+            max-height: 300px;
+            overflow-y: auto;
         }
 
-        body.light .signal-box {
-            background: #f3f3f3;
+        .tv-result-item {
+            display: grid;
+            grid-template-columns: 120px 1fr 120px;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #2a2e39;
+            cursor: pointer;
+            font-size: 12px;
         }
 
-        /* Responsive */
-        @media (max-width: 1000px) {
-            .sidebar {
-                width: 180px;
-            }
+        .tv-result-item:hover { background: #2a2e39; }
+        .tv-res-symbol { font-weight: bold; color: #fff; }
+        .tv-res-desc { color: #787b86; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
+        .tv-res-meta { text-align: right; color: #9db2ce; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+        .tv-badge { background: #232733; padding: 2px 4px; border-radius: 3px; font-size: 9px; color: #868993; text-transform: uppercase; }
 
-            .stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
+        /* Mutual Funds View CSS */
+        .funds-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 10px;
         }
 
-        @media (max-width: 700px) {
-            .app {
-                flex-direction: column;
-            }
+        .fund-card {
+            background: #1b1e28;
+            border: 1px solid #2a2e39;
+            border-radius: 6px;
+            padding: 10px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .fund-card:hover { border-color: #2962ff; }
+        .fund-header { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+        .fund-icon { width: 26px; height: 26px; background: #2a2e39; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 10px; }
+        .fund-name { font-weight: bold; color: #fff; }
+        .fund-manager { font-size: 10px; color: #8c919c; }
+        .fund-footer { display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #2a2e39; padding-top: 6px; }
+        .fund-metric-label { color: #8c919c; font-size: 9px; }
 
-            .sidebar {
-                width: 100%;
-                border-right: none;
-                border-bottom: 1px solid #292d36;
-            }
+        /* Light mode adjustments */
+        body.light .sidebar, body.light .card, body.light .chart-card, body.light .panel { background: white; border-color: #ddd; }
+        body.light .theme-btn, body.light .profile-btn { background: white; color: #111; border-color: #ddd; }
+        body.light .symbol-search-trigger { background: #f0f3fa; border-color: #d1d4dc; color: #111; }
+        body.light .tv-search-dialog { background: #ffffff; border-color: #d1d4dc; color: #111; }
+        body.light .tv-search-header, body.light .tv-filters-bar, body.light .tv-result-item { border-color: #e0e3eb; }
+        body.light .tv-search-input-box { color: #111; }
+        body.light .tv-result-item:hover { background: #f0f3fa; }
+        body.light .tv-res-symbol { color: #111; }
+        body.light .card-value, body.light .live-price-num { color: #111; }
 
-            .menu {
-                flex-direction: row;
-                overflow-x: auto;
-            }
+        /* Responsive Media Queries */
+        @media (max-width: 900px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .bottom-grid { grid-template-columns: 1fr; }
+            .funds-grid { grid-template-columns: 1fr; }
+        }
 
-            .main {
-                padding: 12px;
-            }
-
-            .stats,
-            .bottom-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .chart-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 15px;
-            }
+        @media (max-width: 600px) {
+            .app { flex-direction: column; }
+            .sidebar { width: 100%; display: flex; flex-direction: row; align-items: center; overflow-x: auto; padding: 8px; }
+            .logo { display: none; }
+            .menu { flex-direction: row; width: 100%; }
+            .menu button { padding: 6px 10px; font-size: 11px; white-space: nowrap; text-align: center; }
+            .stats { grid-template-columns: 1fr; }
+            .tv-result-item { grid-template-columns: 90px 1fr 80px; }
         }
     </style>
 </head>
@@ -579,427 +504,355 @@
 
 <div class="app">
 
-    <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="logo">Forex Terminal</div>
+        <div class="logo">Forex</div>
         <div class="menu">
-            <button class="active">Dashboard</button>
-            <button>Markets</button>
-            <button>Signals</button>
-            <button>Trades</button>
-            <button>Settings</button>
+            <button class="active" onclick="switchSection('dashboard', this)">Dashboard</button>
+            <button onclick="switchSection('markets', this)">Markets</button>
+            <button onclick="switchSection('signals', this)">Signals</button>
+            <button onclick="switchSection('trades', this)">Trades</button>
+            <button onclick="switchSection('mutualfunds', this)">Funds</button>
+            <button onclick="switchSection('settings', this)">Settings</button>
         </div>
     </aside>
 
-    <!-- Main Content -->
     <main class="main">
 
-        <!-- Header -->
         <div class="header">
-            <h1>Trading Dashboard</h1>
+            <h1>Dashboard</h1>
             <div class="header-right">
-                <span class="connection" id="market-status">Connecting...</span>
-                <button class="theme-btn" onclick="toggleTheme()">Toggle Theme</button>
-                
-                <!-- TradingView Style User Profile Icon Trigger -->
-                <button class="profile-btn" id="profileBtn" onclick="toggleAuthDropdown(event)">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span class="connection" id="market-status">Connected</span>
+                <button class="theme-btn" onclick="toggleTheme()">Theme</button>
+                <button class="profile-btn" onclick="alert('Profile Settings')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                 </button>
+            </div>
+        </div>
 
-                <!-- Dropdown Menu -->
-                <div class="auth-dropdown" id="authDropdown">
-                    <a class="auth-dropdown-item" onclick="openModal('signin')">Sign in</a>
-                    <a class="auth-dropdown-item" onclick="openModal('signup')">Sign up</a>
-                    
+        <div id="section-dashboard" class="view-section active">
+            
+            <div class="symbol-search-trigger" onclick="openSymbolSearchModal()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span id="active-search-label">XAUUSD — Gold / U.S. Dollar (Spot Price)</span>
+            </div>
+
+            <div class="stats">
+                <div class="card">
+                    <div class="card-title">Balance</div>
+                    <div class="card-value" id="balance">$150.00</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Asset Price (Live)</div>
+                    <div class="live-price-box" id="livePriceContainer">
+                        <div class="live-price-row">
+                            <span class="live-price-num" id="livePriceNum">4,463.17</span>
+                            <span class="live-change-num positive" id="liveChangeNum">+5.10 (+0.11%)</span>
+                        </div>
+                        <div class="live-subtext" id="liveSubtext">Real-time Feed Active</div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Timeframe</div>
+                    <div class="card-value" id="current-timeframe">15m</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Max Risk</div>
+                    <div class="card-value">$1.50</div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="symbol" id="chart-title-symbol">XAUUSD</div>
+                        <small id="chart-sub-desc" style="font-size: 11px; color: #8c919c;">Gold / US Dollar</small>
+                    </div>
+
+                    <div class="timeframes">
+                        <button class="timeframe-btn" onclick="changeTimeframe('1', '1m', this)">1m</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('5', '5m', this)">5m</button>
+                        <button class="timeframe-btn active" onclick="changeTimeframe('15', '15m', this)">15m</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('30', '30m', this)">30m</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('60', '1H', this)">1H</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('D', '1D', this)">1D</button>
+                    </div>
+                </div>
+
+                <div class="tradingview-widget-container" style="height: 420px; width: 100%;">
+                    <div id="tradingview_chart" style="height: 100%; width: 100%;"></div>
+                </div>
+            </div>
+
+            <div class="bottom-grid">
+                <div class="panel">
+                    <h3>Technical Indicators</h3>
+                    <div class="indicator"><span class="indicator-label">EMA 20</span><span id="ema20">--</span></div>
+                    <div class="indicator"><span class="indicator-label">EMA 50</span><span id="ema50">--</span></div>
+                    <div class="indicator"><span class="indicator-label">RSI 14</span><span id="rsi">--</span></div>
+                    <div class="indicator"><span class="indicator-label">ATR 14</span><span id="atr">--</span></div>
+                </div>
+
+                <div class="panel">
+                    <h3>Trading Signal</h3>
+                    <div class="signal-box"><div id="signal">HOLD</div></div>
+                    <div class="trade-row"><span>Entry</span><span id="entry">--</span></div>
+                    <div class="trade-row"><span>Stop Loss</span><span id="stop-loss">--</span></div>
+                    <div class="trade-row"><span>Take Profit</span><span id="take-profit">--</span></div>
+                    <div class="trade-buttons">
+                        <button class="buy-btn" onclick="alert('BUY executed')">BUY</button>
+                        <button class="sell-btn" onclick="alert('SELL executed')">SELL</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Statistics Cards -->
-        <div class="stats">
-            <div class="card">
-                <div class="card-title">ACCOUNT BALANCE</div>
-                <div class="card-value" id="balance">$150.00</div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">XAUUSD PRICE</div>
-                <div class="card-value" id="price">$--.--</div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">TIMEFRAME</div>
-                <div class="card-value" id="current-timeframe">15m</div>
-            </div>
-
-            <div class="card">
-                <div class="card-title">MAX RISK</div>
-                <div class="card-value">$1.50</div>
-            </div>
-        </div>
-
-        <!-- Chart Section -->
-        <div class="chart-card">
-            <div class="chart-header">
-                <div>
-                    <div class="symbol">XAUUSD</div>
-                    <small>Gold / US Dollar</small>
-                </div>
-
-                <div class="timeframes">
-                    <button class="timeframe-btn" data-tv="1" data-display="1m">1m</button>
-                    <button class="timeframe-btn" data-tv="5" data-display="5m">5m</button>
-                    <button class="timeframe-btn active" data-tv="15" data-display="15m">15m</button>
-                    <button class="timeframe-btn" data-tv="30" data-display="30m">30m</button>
-                    <button class="timeframe-btn" data-tv="60" data-display="1H">1H</button>
-                    <button class="timeframe-btn" data-tv="D" data-display="1D">1D</button>
-                </div>
-            </div>
-
-            <div class="tradingview-widget-container" style="height: 500px; width: 100%;">
-                <div id="tradingview_xauusd" style="height: 100%; width: 100%;"></div>
-            </div>
-        </div>
-
-        <!-- Bottom Panels -->
-        <div class="bottom-grid">
+        <div id="section-mutualfunds" class="view-section">
             <div class="panel">
-                <h3>Technical Indicators</h3>
-                <div class="indicator">
-                    <span class="indicator-label">EMA 20</span>
-                    <span id="ema20">--</span>
-                </div>
-                <div class="indicator">
-                    <span class="indicator-label">EMA 50</span>
-                    <span id="ema50">--</span>
-                </div>
-                <div class="indicator">
-                    <span class="indicator-label">RSI 14</span>
-                    <span id="rsi">--</span>
-                </div>
-                <div class="indicator">
-                    <span class="indicator-label">ATR 14</span>
-                    <span id="atr">--</span>
-                </div>
-            </div>
+                <h3>Global & Indian Mutual Funds & ETFs</h3>
+                <div class="funds-grid">
+                    <div class="fund-card" onclick="selectAssetSymbol('SETFNIF50', 'SBI Nifty 50 ETF', 'BSE:SETFNIF50', '275.50', '+1.20 (+0.44%)'); switchSection('dashboard', document.querySelector('.sidebar .menu button'));">
+                        <div class="fund-header">
+                            <div class="fund-icon" style="color: #ff9933;">SBI</div>
+                            <div><div class="fund-name">SBI Nifty 50 ETF</div><div class="fund-manager">Large Cap Index</div></div>
+                        </div>
+                        <div class="fund-footer">
+                            <div><span class="fund-metric-label">1Y CAGR</span><br><strong>18.4%</strong></div>
+                            <div><span class="fund-metric-label">ACTION</span><br><strong style="color: #ff9933;">Chart &rarr;</strong></div>
+                        </div>
+                    </div>
 
-            <div class="panel">
-                <h3>Trading Signal</h3>
-                <div class="signal-box">
-                    <div id="signal">HOLD</div>
-                </div>
-                <div class="trade-row">
-                    <span>Entry</span>
-                    <span id="entry">--</span>
-                </div>
-                <div class="trade-row">
-                    <span>Stop Loss</span>
-                    <span id="stop-loss">--</span>
-                </div>
-                <div class="trade-row">
-                    <span>Take Profit</span>
-                    <span id="take-profit">--</span>
-                </div>
-                <div class="trade-buttons">
-                    <button class="buy-btn" onclick="buyTrade()">BUY</button>
-                    <button class="sell-btn" onclick="sellTrade()">SELL</button>
+                    <div class="fund-card" onclick="selectAssetSymbol('ICICINIFTY', 'ICICI Prudential Nifty ETF', 'NSE:ICICINIFTY', '276.10', '+1.30 (+0.47%)'); switchSection('dashboard', document.querySelector('.sidebar .menu button'));">
+                        <div class="fund-header">
+                            <div class="fund-icon" style="color: #38bdf8;">ICICI</div>
+                            <div><div class="fund-name">ICICI Pru Nifty ETF</div><div class="fund-manager">Large Cap Fund</div></div>
+                        </div>
+                        <div class="fund-footer">
+                            <div><span class="fund-metric-label">1Y CAGR</span><br><strong>19.1%</strong></div>
+                            <div><span class="fund-metric-label">ACTION</span><br><strong style="color: #38bdf8;">Chart &rarr;</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="fund-card" onclick="selectAssetSymbol('SPY', 'SPDR S&P 500 ETF TRUST', 'AMEX:SPY', '580.40', '+3.20 (+0.55%)'); switchSection('dashboard', document.querySelector('.sidebar .menu button'));">
+                        <div class="fund-header">
+                            <div class="fund-icon" style="color: #2962ff;">SPY</div>
+                            <div><div class="fund-name">SPDR S&P 500 ETF</div><div class="fund-manager">US Equity Fund</div></div>
+                        </div>
+                        <div class="fund-footer">
+                            <div><span class="fund-metric-label">EXCHANGE</span><br><strong>AMEX</strong></div>
+                            <div><span class="fund-metric-label">ACTION</span><br><strong style="color: #2962ff;">Chart &rarr;</strong></div>
+                        </div>
+                    </div>
+
+                    <div class="fund-card" onclick="selectAssetSymbol('QQQ', 'Invesco QQQ Trust', 'NASDAQ:QQQ', '495.10', '+2.90 (+0.59%)'); switchSection('dashboard', document.querySelector('.sidebar .menu button'));">
+                        <div class="fund-header">
+                            <div class="fund-icon" style="color: #26a69a;">QQQ</div>
+                            <div><div class="fund-name">Invesco QQQ Trust</div><div class="fund-manager">Nasdaq-100 Index</div></div>
+                        </div>
+                        <div class="fund-footer">
+                            <div><span class="fund-metric-label">EXCHANGE</span><br><strong>NASDAQ</strong></div>
+                            <div><span class="fund-metric-label">ACTION</span><br><strong style="color: #26a69a;">Chart &rarr;</strong></div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <div id="section-markets" class="view-section"><div class="panel"><h3>Markets Overview</h3></div></div>
+        <div id="section-signals" class="view-section"><div class="panel"><h3>Active Signals</h3></div></div>
+        <div id="section-trades" class="view-section"><div class="panel"><h3>Order History</h3></div></div>
+        <div id="section-settings" class="view-section"><div class="panel"><h3>Terminal Settings</h3></div></div>
 
     </main>
 
 </div>
 
-<!-- Authentication Modal Overlay -->
-<div class="modal-overlay" id="authModal">
-    <div class="modal-container">
-        <button class="modal-close" onclick="closeModal()">&times;</button>
-        <h2 class="modal-title" id="modalTitle">Sign in</h2>
-
-        <!-- Google Sign-in Button -->
-        <button class="social-btn" onclick="handleGoogleSignIn()">
-            <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"/><path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.13 0-5.78-2.11-6.73-4.96H1.18v3.15C3.15 21.32 7.23 24 12 24z"/><path fill="#FBBC05" d="M5.27 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.6H1.18C.43 8.13 0 9.87 0 11.7c0 1.83.43 3.57 1.18 5.1l4.09-2.56z"/><path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.23 0 3.15 2.68 1.18 6.6l4.09 3.15c.95-2.85 3.6-4.96 6.73-4.96z"/></svg>
-            Continue with Google
-        </button>
-
-        <div class="divider">or</div>
-
-        <!-- Form -->
-        <form onsubmit="handleFormSubmit(event)">
-            <div class="form-group">
-                <label class="form-label" id="emailLabel">Email or Username</label>
-                <input type="text" class="form-input" required placeholder="Enter your email or username">
-            </div>
-
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <input type="password" class="form-input" required placeholder="Create or enter password">
-            </div>
-
-            <button type="submit" class="auth-submit-btn" id="modalSubmitBtn">Sign in</button>
-        </form>
-
-        <div class="modal-switch" id="modalSwitchText">
-            Don't have an account? <a onclick="switchModalMode()">Sign up</a>
+<div class="tv-search-modal-overlay" id="tvSearchModal" onclick="handleModalBackdropClick(event)">
+    <div class="tv-search-dialog">
+        <div class="tv-search-header">
+            <svg class="tv-search-icon-left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" class="tv-search-input-box" id="tvSearchInput" placeholder="Symbol, ISIN, or CUSIP" oninput="filterAssets(this.value)" autofocus>
+            <button class="tv-search-close" onclick="closeSymbolSearchModal()">&times;</button>
         </div>
+
+        <div class="tv-filters-bar" id="tvFiltersBar">
+            <button class="tv-filter-pill active" onclick="setFilter('all', this)">All</button>
+            <button class="tv-filter-pill" onclick="setFilter('stocks', this)">Stocks</button>
+            <button class="tv-filter-pill" onclick="setFilter('etf', this)">Funds</button>
+            <button class="tv-filter-pill" onclick="setFilter('futures', this)">Futures</button>
+            <button class="tv-filter-pill" onclick="setFilter('spot', this)">Forex</button>
+            <button class="tv-filter-pill" onclick="setFilter('crypto', this)">Crypto</button>
+        </div>
+
+        <div class="tv-results-list" id="tvResultsList"></div>
     </div>
 </div>
 
-<!-- TradingView Script -->
 <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 
 <script>
-/*
-====================================================
-AUTH DROPDOWN & MODAL LOGIC
-====================================================
-*/
-let isSignUpMode = false;
+const globalAssetDatabase = [
+    { symbol: "XAUUSD", desc: "Gold / U.S. Dollar (Spot Price)", type: "spot", tvSymbol: "OANDA:XAUUSD", exchange: "OANDA", badge: "spot", price: "4,463.17", change: "+5.10 (+0.11%)" },
+    { symbol: "GCZ2026", desc: "Gold Futures (Dec 2026)", type: "futures", tvSymbol: "COMEX:GCZ2026", exchange: "COMEX", badge: "futures", price: "4,472.95", change: "+3.20 (+0.07%)" },
+    { symbol: "META", desc: "Meta Platforms, Inc.", type: "stocks", tvSymbol: "NASDAQ:META", exchange: "NASDAQ", badge: "stock", price: "610.68", change: "+17.83 (+3.01%)" },
+    { symbol: "NVDA", desc: "NVIDIA Corporation", type: "stocks", tvSymbol: "NASDAQ:NVDA", exchange: "NASDAQ", badge: "stock", price: "135.20", change: "+4.12 (+3.14%)" },
+    { symbol: "TSLA", desc: "Tesla, Inc.", type: "stocks", tvSymbol: "NASDAQ:TSLA", exchange: "NASDAQ", badge: "stock", price: "381.01", change: "+0.11 (+0.03%)" },
+    { symbol: "GLD", desc: "SPDR Gold Shares ETF", type: "etf", tvSymbol: "AMEX:GLD", exchange: "AMEX", badge: "etf", price: "240.15", change: "+0.85 (+0.36%)" },
+    { symbol: "SPY", desc: "SPDR S&P 500 ETF Trust", type: "etf", tvSymbol: "AMEX:SPY", exchange: "AMEX", badge: "etf", price: "580.40", change: "+3.20 (+0.55%)" },
+    { symbol: "QQQ", desc: "Invesco QQQ Trust, Series 1", type: "etf", tvSymbol: "NASDAQ:QQQ", exchange: "NASDAQ", badge: "etf", price: "495.10", change: "+2.90 (+0.59%)" },
+    { symbol: "SETFNIF50", desc: "SBI Nifty 50 ETF", type: "etf", tvSymbol: "BSE:SETFNIF50", exchange: "BSE", badge: "etf", price: "275.50", change: "+1.20 (+0.44%)" },
+    { symbol: "ICICINIFTY", desc: "ICICI Prudential Nifty ETF", type: "etf", tvSymbol: "NSE:ICICINIFTY", exchange: "NSE", badge: "etf", price: "276.10", change: "+1.30 (+0.47%)" },
+    { symbol: "BTCUSD", desc: "Bitcoin / U.S. Dollar", type: "crypto", tvSymbol: "BITSTAMP:BTCUSD", exchange: "BITSTAMP", badge: "crypto", price: "91,420.00", change: "+1,240 (+1.37%)" }
+];
 
-function toggleAuthDropdown(event) {
-    event.stopPropagation();
-    const dropdown = document.getElementById("authDropdown");
-    dropdown.classList.toggle("show");
+let activeCategoryFilter = 'all';
+let currentSelectedTvSymbol = "OANDA:XAUUSD";
+let currentTimeframe = "15";
+let currentAssetData = globalAssetDatabase[0];
+let livePriceInterval = null;
+
+function switchSection(sectionId, btnElement) {
+    document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+    document.getElementById('section-' + sectionId).classList.add('active');
+    if (btnElement) {
+        document.querySelectorAll('.sidebar .menu button').forEach(b => b.classList.remove('active'));
+        btnElement.classList.add('active');
+    }
 }
 
-window.addEventListener("click", function () {
-    const dropdown = document.getElementById("authDropdown");
-    if (dropdown.classList.contains("show")) {
-        dropdown.classList.remove("show");
-    }
-});
+function openSymbolSearchModal() {
+    document.getElementById('tvSearchModal').classList.add('active');
+    document.getElementById('tvSearchInput').value = "";
+    document.getElementById('tvSearchInput').focus();
+    renderSearchResults(globalAssetDatabase);
+}
 
-function openModal(mode) {
-    const modal = document.getElementById("authModal");
-    modal.classList.add("active");
-    if (mode === 'signup') {
-        setModeToSignUp();
+function closeSymbolSearchModal() {
+    document.getElementById('tvSearchModal').classList.remove('active');
+}
+
+function handleModalBackdropClick(event) {
+    if (event.target === document.getElementById('tvSearchModal')) {
+        closeSymbolSearchModal();
+    }
+}
+
+function setFilter(category, btnElem) {
+    activeCategoryFilter = category;
+    document.querySelectorAll('.tv-filters-bar .tv-filter-pill').forEach(b => b.classList.remove('active'));
+    btnElem.classList.add('active');
+    filterAssets(document.getElementById('tvSearchInput').value);
+}
+
+function filterAssets(query) {
+    const q = query.toLowerCase();
+    const filtered = globalAssetDatabase.filter(item => {
+        const matchesCategory = (activeCategoryFilter === 'all' || item.type === activeCategoryFilter);
+        const matchesQuery = item.symbol.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+        return matchesCategory && matchesQuery;
+    });
+    renderSearchResults(filtered);
+}
+
+function renderSearchResults(items) {
+    const container = document.getElementById('tvResultsList');
+    if (items.length === 0) {
+        container.innerHTML = `<div style="padding: 20px; text-align: center; color: #787b86;">No result found</div>`;
+        return;
+    }
+    container.innerHTML = items.map(item => `
+        <div class="tv-result-item" onclick="selectAssetSymbol('${item.symbol}', '${item.desc}', '${item.tvSymbol}', '${item.price}', '${item.change}')">
+            <div class="tv-res-symbol">${item.symbol}</div>
+            <div class="tv-res-desc">${item.desc}</div>
+            <div class="tv-res-meta">
+                <span class="tv-badge">${item.badge}</span>
+                <span>${item.exchange}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function selectAssetSymbol(symbol, desc, tvSymbol, price, change) {
+    document.getElementById('active-search-label').innerText = `${symbol} — ${desc}`;
+    document.getElementById('chart-title-symbol').innerText = symbol;
+    document.getElementById('chart-sub-desc').innerText = desc;
+    currentSelectedTvSymbol = tvSymbol;
+
+    const found = globalAssetDatabase.find(i => i.symbol === symbol);
+    if (found) {
+        currentAssetData = found;
     } else {
-        setModeToSignIn();
+        currentAssetData = { symbol, desc, tvSymbol, price: price || "100.00", change: change || "+0.00 (0.00%)" };
     }
+
+    renderLivePriceCard();
+    closeSymbolSearchModal();
+    updateChartWidget();
 }
 
-function closeModal() {
-    const modal = document.getElementById("authModal");
-    modal.classList.remove("active");
-}
-
-function switchModalMode() {
-    if (isSignUpMode) {
-        setModeToSignIn();
+function renderLivePriceCard() {
+    document.getElementById('livePriceNum').innerText = currentAssetData.price;
+    const changeElem = document.getElementById('liveChangeNum');
+    changeElem.innerText = currentAssetData.change;
+    
+    if (currentAssetData.change.startsWith("-")) {
+        changeElem.className = "live-change-num negative";
     } else {
-        setModeToSignUp();
+        changeElem.className = "live-change-num positive";
     }
 }
 
-function setModeToSignIn() {
-    isSignUpMode = false;
-    document.getElementById("modalTitle").innerText = "Sign in";
-    document.getElementById("modalSubmitBtn").innerText = "Sign in";
-    document.getElementById("modalSwitchText").innerHTML = 'Don\'t have an account? <a onclick="switchModalMode()">Sign up</a>';
+// Simulates live real-time price ticks seamlessly inside the uniform card layout
+function startLiveTickerSimulation() {
+    if (livePriceInterval) clearInterval(livePriceInterval);
+    livePriceInterval = setInterval(() => {
+        let num = parseFloat(currentAssetData.price.replace(/,/g, ''));
+        const diff = (Math.random() * 0.4 - 0.19);
+        num += diff;
+        currentAssetData.price = num.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        renderLivePriceCard();
+    }, 2500);
 }
 
-function setModeToSignUp() {
-    isSignUpMode = true;
-    document.getElementById("modalTitle").innerText = "Sign up";
-    document.getElementById("modalSubmitBtn").innerText = "Sign up";
-    document.getElementById("modalSwitchText").innerHTML = 'Already have an account? <a onclick="switchModalMode()">Sign in</a>';
+function changeTimeframe(tvInterval, displayLabel, btnElem) {
+    currentTimeframe = tvInterval;
+    document.querySelectorAll('.timeframes .timeframe-btn').forEach(b => b.classList.remove('active'));
+    btnElem.classList.add('active');
+    document.getElementById('current-timeframe').innerText = displayLabel;
+    updateChartWidget();
 }
 
-function handleGoogleSignIn() {
-    alert("Google Sign-In integration ready. Connect with Firebase or OAuth backend credentials.");
-    closeModal();
-}
-
-function handleFormSubmit(event) {
-    event.preventDefault();
-    const action = isSignUpMode ? "Sign Up" : "Sign In";
-    alert(`${action} successful! (Backend integration pending)`);
-    closeModal();
-}
-
-/*
-====================================================
-GLOBAL VARIABLES & TRADING DASHBOARD SCRIPT
-====================================================
-*/
-let currentInterval = "15";
-let globalCandles = [];
-
-function renderTradingViewWidget(interval) {
+function updateChartWidget() {
+    const isLight = document.body.classList.contains("light");
+    document.getElementById('tradingview_chart').innerHTML = "";
+    
     new TradingView.widget({
         "autosize": true,
-        "symbol": "OANDA:XAUUSD",
-        "interval": interval,
+        "symbol": currentSelectedTvSymbol,
+        "interval": currentTimeframe,
         "timezone": "Etc/UTC",
-        "theme": document.body.classList.contains("light") ? "light" : "dark",
+        "theme": isLight ? "light" : "dark",
         "style": "1",
         "locale": "en",
+        "toolbar_bg": isLight ? "#f1f3f6" : "#1e222d",
         "enable_publishing": false,
-        "allow_symbol_change": true,
-        "container_id": "tradingview_xauusd"
+        "hide_top_toolbar": false,
+        "hide_legend": false,
+        "container_id": "tradingview_chart"
     });
-}
-
-document.querySelectorAll(".timeframe-btn").forEach(button => {
-    button.addEventListener("click", function () {
-        document.querySelectorAll(".timeframe-btn").forEach(btn => btn.classList.remove("active"));
-        this.classList.add("active");
-
-        const tvInterval = this.dataset.tv;
-        const displayLabel = this.dataset.display;
-
-        document.getElementById("current-timeframe").innerText = displayLabel;
-        currentInterval = tvInterval;
-
-        renderTradingViewWidget(tvInterval);
-        fetchLivePriceAndData();
-    });
-});
-
-function calculateEMA(prices, period) {
-    if (prices.length < period) return null;
-    const k = 2 / (period + 1);
-    let ema = prices.slice(0, period).reduce((acc, val) => acc + val, 0) / period;
-    for (let i = period; i < prices.length; i++) {
-        ema = (prices[i] * k) + (ema * (1 - k));
-    }
-    return ema;
-}
-
-function calculateRSI(prices, period = 14) {
-    if (prices.length <= period) return null;
-    let gains = 0;
-    let losses = 0;
-    for (let i = 1; i <= period; i++) {
-        const diff = prices[i] - prices[i - 1];
-        if (diff >= 0) gains += diff;
-        else losses -= diff;
-    }
-    let avgGain = gains / period;
-    let avgLoss = losses / period;
-
-    for (let i = period + 1; i < prices.length; i++) {
-        const diff = prices[i] - prices[i - 1];
-        if (diff >= 0) {
-            avgGain = (avgGain * (period - 1) + diff) / period;
-            avgLoss = (avgLoss * (period - 1)) / period;
-        } else {
-            avgGain = (avgGain * (period - 1)) / period;
-            avgLoss = (avgLoss * (period - 1) - diff) / period;
-        }
-    }
-    if (avgLoss === 0) return 100;
-    const rs = avgGain / avgLoss;
-    return 100 - (100 / (1 + rs));
-}
-
-function calculateATR(candles, period = 14) {
-    if (candles.length <= period) return null;
-    let trs = [];
-    for (let i = 1; i < candles.length; i++) {
-        const high = candles[i].high;
-        const low = candles[i].low;
-        const prevClose = candles[i - 1].close;
-        const tr = Math.max(
-            high - low,
-            Math.abs(high - prevClose),
-            Math.abs(low - prevClose)
-        );
-        trs.push(tr);
-    }
-    let atr = trs.slice(0, period).reduce((acc, val) => acc + val, 0) / period;
-    for (let i = period; i < trs.length; i++) {
-        atr = (atr * (period - 1) + trs[i]) / period;
-    }
-    return atr;
-}
-
-function updateIndicatorsAndSignals(candles) {
-    if (!candles || candles.length < 50) return;
-
-    const closePrices = candles.map(c => c.close);
-    const ema20 = calculateEMA(closePrices, 20);
-    const ema50 = calculateEMA(closePrices, 50);
-    const rsi = calculateRSI(closePrices, 14);
-    const atr = calculateATR(candles, 14);
-
-    if (ema20 !== null) document.getElementById("ema20").innerText = `$${ema20.toFixed(2)}`;
-    if (ema50 !== null) document.getElementById("ema50").innerText = `$${ema50.toFixed(2)}`;
-    if (rsi !== null) document.getElementById("rsi").innerText = rsi.toFixed(2);
-    if (atr !== null) document.getElementById("atr").innerText = `$${atr.toFixed(2)}`;
-
-    const currentPrice = closePrices[closePrices.length - 1];
-    const signalElem = document.getElementById("signal");
-    const entryElem = document.getElementById("entry");
-    const slElem = document.getElementById("stop-loss");
-    const tpElem = document.getElementById("take-profit");
-
-    const atrValue = atr || 2.5;
-
-    if (ema20 > ema50 && rsi > 50 && rsi < 70) {
-        signalElem.innerText = "BUY";
-        signalElem.style.color = "#26a69a";
-        entryElem.innerText = `$${currentPrice.toFixed(2)}`;
-        slElem.innerText = `$${(currentPrice - (atrValue * 1.5)).toFixed(2)}`;
-        tpElem.innerText = `$${(currentPrice + (atrValue * 3.0)).toFixed(2)}`;
-    } else if (ema20 < ema50 && rsi < 50 && rsi > 30) {
-        signalElem.innerText = "SELL";
-        signalElem.style.color = "#ef5350";
-        entryElem.innerText = `$${currentPrice.toFixed(2)}`;
-        slElem.innerText = `$${(currentPrice + (atrValue * 1.5)).toFixed(2)}`;
-        tpElem.innerText = `$${(currentPrice - (atrValue * 3.0)).toFixed(2)}`;
-    } else {
-        signalElem.innerText = "HOLD";
-        signalElem.style.color = "#8c919c";
-        entryElem.innerText = "--";
-        slElem.innerText = "--";
-        tpElem.innerText = "--";
-    }
-}
-
-async function fetchLivePriceAndData() {
-    try {
-        const response = await fetch(`/api/market-candles/?timeframe=${currentInterval}m`);
-        if (!response.ok) throw new Error("HTTP connection failed");
-
-        const result = await response.json();
-        if (result.candles && result.candles.length > 0) {
-            globalCandles = result.candles;
-            const latestPrice = globalCandles[globalCandles.length - 1].close;
-
-            document.getElementById("price").innerText = `$${latestPrice.toFixed(2)}`;
-            document.getElementById("market-status").innerText = "Connected";
-
-            updateIndicatorsAndSignals(globalCandles);
-        }
-    } catch (error) {
-        console.error("Data Fetch Error:", error);
-        document.getElementById("market-status").innerText = "Disconnected";
-    }
 }
 
 function toggleTheme() {
     document.body.classList.toggle("light");
-    renderTradingViewWidget(currentInterval);
-}
-
-function buyTrade() {
-    alert("BUY order placed! (Connecting to MT5)");
-}
-
-function sellTrade() {
-    alert("SELL order placed! (Connecting to MT5)");
+    updateChartWidget();
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-    renderTradingViewWidget("15");
-    fetchLivePriceAndData();
-    setInterval(fetchLivePriceAndData, 60000);
+    renderLivePriceCard();
+    updateChartWidget();
+    renderSearchResults(globalAssetDatabase);
+    startLiveTickerSimulation();
 });
 </script>
 
 </body>
-
 </html>
