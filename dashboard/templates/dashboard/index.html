@@ -894,36 +894,50 @@ function connectMarketWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const socketUrl = `${protocol}//${window.location.host}/ws/dashboard/realtime/`;
 
-
     updateConnectionStatus("Connecting...");
 
-    if (marketSocket) {
-        try { marketSocket.close(); } catch (e) {}
+    if (typeof marketSocket !== 'undefined' && marketSocket) {
+        try { 
+            marketSocket.close(); 
+        } catch (e) {}
     }
 
+    // Assign directly without 'let' or 'const' to avoid redeclaration conflicts
     marketSocket = new WebSocket(socketUrl);
 
     marketSocket.onopen = function() {
         updateConnectionStatus("Real-time Feed Active");
-        marketSocket.send(JSON.stringify({ action: "change_symbol", symbol: currentSymbol }));
+        const symbolToSend = (typeof currentSymbol !== 'undefined' && currentSymbol) ? currentSymbol : 'XAUUSD';
+        marketSocket.send(JSON.stringify({ action: "change_symbol", symbol: symbolToSend }));
     };
 
     marketSocket.onmessage = function(event) {
         try {
             const message = JSON.parse(event.data);
-            handleLiveMarketData(message.data || message);
+            if (typeof handleLiveMarketData === 'function') {
+                handleLiveMarketData(message.data || message);
+            }
         } catch (error) {
             console.error("WS parsing error:", error);
         }
     };
 
-    marketSocket.onerror = function() { updateConnectionStatus("Connection Error"); };
+    marketSocket.onerror = function() { 
+        updateConnectionStatus("Connection Error"); 
+    };
+    
     marketSocket.onclose = function() {
         updateConnectionStatus("Reconnecting...");
         setTimeout(connectMarketWebSocket, 2000);
     };
 }
 
+if (typeof window.wsInitialized === 'undefined') {
+    window.wsInitialized = true;
+    document.addEventListener("DOMContentLoaded", function() {
+        connectMarketWebSocket();
+    });
+}
 function handleLiveMarketData(data) {
     if (!data) return;
 
