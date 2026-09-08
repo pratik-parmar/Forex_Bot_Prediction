@@ -1,31 +1,34 @@
-import yfinance as yf
+import json
+import asyncio
+import websockets
+from channels.layers import get_channel_layer
 
-
-def get_forex_data(symbol="EURUSD=X", period="7d", interval="1m"):
+async def stream_live_forex_ticks(symbol="EUR_USD", api_key="FINNHUB_API_KEY"):
     """
-    Download Forex market data.
-
-    symbol:
-        EURUSD=X = EUR/USD
-        GBPUSD=X = GBP/USD
-        USDJPY=X = USD/JPY
-
-    period:
-        Amount of historical data.
-
-    interval:
-        Candle timeframe.
+    Connects to live Forex feed WebSocket and broadcasts true real-time ticks
+    directly to the Django Channel group.
     """
+    channel_layer = get_channel_layer()
+    uri = f"wss://ws.finnhub.io?token={api_key}"
+    
+    async with websockets.connect(uri) as websocket:
+        # Subscribe to currency pair
+        subscribe_msg = json.dumps({"type": "subscribe", "symbol": f"OANDA:{symbol}"})
+        await websocket.send(subscribe_msg)
 
-    data = yf.download(
-        tickers=symbol,
-        period=period,
-        interval=interval,
-        auto_adjust=False,
-        progress=False
-    )
-
-    if data.empty:
-        raise ValueError("No market data received.")
-
-    return data
+        while True:
+            response = await websocket.recv()
+            data = json.loads(response)
+            
+            # Filter real-time trade/tick updates
+            if data.get("type") == "trade":
+                for tick in data["data"]:
+                    live_payload = {
+                        "type": "market_tick",  # Function name in consumers.py
+                        "symbol": tick["s"],
+                        "price": tick["p"],
+                        "timestamp": tick["t"]
+                    }
+                    
+                    # Broadcast immediately to all connected UI clients
+                    await channel_layer.group_send("forex_live", live_payload)

@@ -27,3 +27,6 @@ urllib3==2.7.0
 websockets==17.1
 whitenoise==6.12.0
 yfinance==1.7.0
+channels
+websocket-client
+python-dotenv

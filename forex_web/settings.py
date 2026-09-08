@@ -31,6 +31,7 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -39,7 +40,16 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'dashboard',
     'mutual_funds',
+    'channels',
+    
 ]
+ASGI_APPLICATION = "forex_web.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -70,6 +80,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'forex_web.wsgi.application'
+
 
 
 # Database
