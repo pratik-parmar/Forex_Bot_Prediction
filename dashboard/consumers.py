@@ -12,7 +12,6 @@ FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 
 class ForexLiveConsumer(AsyncWebsocketConsumer):
     stream_task = None
-    # Store rolling price history buffers per symbol for indicator calculations
     price_histories = {
         "XAUUSD": [],
         "EURUSD": [],
@@ -26,7 +25,7 @@ class ForexLiveConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
         if ForexLiveConsumer.stream_task is None or ForexLiveConsumer.stream_task.done():
-            ForexLiveConsumer.stream_task = asyncio.create_task(self.start_live_stream())
+            ForexLiveConsumer.stream_task = asyncio.create_task(self.start_live_stream_safely())
 
     async def disconnect(self, close_code):
         await self.channel_layer.group_discard(self.group_name, self.channel_name)
@@ -43,70 +42,77 @@ class ForexLiveConsumer(AsyncWebsocketConsumer):
             "reason": event.get("reason")
         }))
 
+    async def start_live_stream_safely(self):
+        """Outer wrapper with auto-reconnect loop so the stream never dies permanently."""
+        while True:
+            try:
+                await self.start_live_stream()
+            except Exception as e:
+                print(f"[-] Finnhub Stream Error: {e}. Reconnecting in 5 seconds...")
+                await asyncio.sleep(5)
+
     async def start_live_stream(self):
         channel_layer = get_channel_layer()
+        
+        if not FINNHUB_API_KEY:
+            print("[!] WARNING: FINNHUB_API_KEY is missing from environment variables!")
+            
         api_key = FINNHUB_API_KEY if FINNHUB_API_KEY else "c0123456789"
         uri = f"wss://ws.finnhub.io?token={api_key}"
 
-        try:
-            async with websockets.connect(uri) as ws:
-                symbols_to_subscribe = [
-                    "OANDA:XAU_USD",
-                    "OANDA:EUR_USD",
-                    "OANDA:GBP_USD",
-                    "BINANCE:BTCUSDT",
-                    "BITSTAMP:BTCUSD"
-                ]
-                
-                for sym in symbols_to_subscribe:
-                    await ws.send(json.dumps({"type": "subscribe", "symbol": sym}))
+        async with websockets.connect(uri) as ws:
+            symbols_to_subscribe = [
+                "OANDA:XAU_USD",
+                "OANDA:EUR_USD",
+                "OANDA:GBP_USD",
+                "BINANCE:BTCUSDT",
+                "BITSTAMP:BTCUSD"
+            ]
+            
+            for sym in symbols_to_subscribe:
+                await ws.send(json.dumps({"type": "subscribe", "symbol": sym}))
 
-                while True:
-                    response = await ws.recv()
-                    payload = json.loads(response)
+            while True:
+                response = await ws.recv()
+                payload = json.loads(response)
 
-                    if payload.get("type") == "trade":
-                        for tick in payload.get("data", []):
-                            raw_sym = tick.get("s", "")
-                            price = float(tick.get("p", 0))
-                            
-                            clean_symbol = None
-                            if "XAU" in raw_sym:
-                                clean_symbol = "XAUUSD"
-                            elif "EUR" in raw_sym:
-                                clean_symbol = "EURUSD"
-                            elif "GBP" in raw_sym:
-                                clean_symbol = "GBPUSD"
-                            elif "BTC" in raw_sym or "BITSTAMP" in raw_sym or "BINANCE" in raw_sym:
-                                clean_symbol = "BTCUSD"
+                if payload.get("type") == "trade":
+                    for tick in payload.get("data", []):
+                        raw_sym = tick.get("s", "")
+                        price = float(tick.get("p", 0))
+                        
+                        clean_symbol = None
+                        if "XAU" in raw_sym:
+                            clean_symbol = "XAUUSD"
+                        elif "EUR" in raw_sym:
+                            clean_symbol = "EURUSD"
+                        elif "GBP" in raw_sym:
+                            clean_symbol = "GBPUSD"
+                        elif "BTC" in raw_sym or "BITSTAMP" in raw_sym or "BINANCE" in raw_sym:
+                            clean_symbol = "BTCUSD"
 
-                            if clean_symbol and price > 0:
-                                # Append to symbol history buffer (keep last 100 ticks)
-                                history = ForexLiveConsumer.price_histories[clean_symbol]
-                                history.append(price)
-                                if len(history) > 100:
-                                    history.pop(0)
+                        if clean_symbol and price > 0:
+                            history = ForexLiveConsumer.price_histories[clean_symbol]
+                            history.append(price)
+                            if len(history) > 100:
+                                history.pop(0)
 
-                                # Compute indicators if we have enough data points
-                                ema20, ema50, rsi14, atr14, signal, reason = self.calculate_indicators(history)
+                            ema20, ema50, rsi14, atr14, signal, reason = self.calculate_indicators(history)
 
-                                await channel_layer.group_send(
-                                    "forex_live",
-                                    {
-                                        "type": "market_tick",
-                                        "symbol": clean_symbol,
-                                        "price": price,
-                                        "ema_20": ema20,
-                                        "ema_50": ema50,
-                                        "rsi_14": rsi14,
-                                        "atr_14": atr14,
-                                        "signal": signal,
-                                        "reason": reason
-                                    }
-                                )
-        except Exception as e:
-            print(f"[-] Live Stream Error: {e}")
-            ForexLiveConsumer.stream_task = None
+                            await channel_layer.group_send(
+                                "forex_live",
+                                {
+                                    "type": "market_tick",
+                                    "symbol": clean_symbol,
+                                    "price": price,
+                                    "ema_20": ema20,
+                                    "ema_50": ema50,
+                                    "rsi_14": rsi14,
+                                    "atr_14": atr14,
+                                    "signal": signal,
+                                    "reason": reason
+                                }
+                            )
 
     def calculate_indicators(self, history):
         if len(history) < 5:
@@ -114,17 +120,11 @@ class ForexLiveConsumer(AsyncWebsocketConsumer):
 
         arr = np.array(history)
 
-        # EMA 20 & 50
         ema_20 = round(float(pd_ema(arr, 20)), 2) if len(arr) >= 20 else round(arr[-1], 2)
         ema_50 = round(float(pd_ema(arr, 50)), 2) if len(arr) >= 50 else round(arr[-1], 2)
-
-        # RSI 14
         rsi_14 = round(float(compute_rsi(arr, 14)), 2) if len(arr) >= 15 else 50.0
-
-        # ATR 14 (Simplified proxy using rolling high-low spread from ticks)
         atr_14 = round(float(np.mean(np.abs(np.diff(arr[-15:])))) if len(arr) >= 15 else 0.1, 4)
 
-        # Signal Generation Logic (EMA Crossover)
         signal = "HOLD"
         reason = "Market consolidating between EMAs."
         if ema_20 > ema_50:
