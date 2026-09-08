@@ -46,16 +46,13 @@ INSTALLED_APPS = [
 ]
 ASGI_APPLICATION = "forex_web.asgi.application"
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://127.0.0.1:6379")
-
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [REDIS_URL],
-        },
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
+
+
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
