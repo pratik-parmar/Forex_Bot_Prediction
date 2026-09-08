@@ -31,3 +31,4 @@ channels
 websocket-client
 python-dotenv
 daphne
+channels_redis
