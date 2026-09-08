@@ -894,6 +894,7 @@ function connectMarketWebSocket() {
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
     const socketUrl = `${protocol}//${window.location.host}/ws/dashboard/realtime/`;
 
+
     updateConnectionStatus("Connecting...");
 
     if (marketSocket) {
@@ -971,9 +972,10 @@ function handleLiveMarketData(data) {
 
 // 6. Application Startup
 document.addEventListener("DOMContentLoaded", function() {
-    initTradingViewWidget();
-    connectMarketWebSocket();
-});
+        if (typeof connectMarketWebSocket === "function") {
+            connectMarketWebSocket();
+        }
+    });
 </script>
 </body>
 </html>
