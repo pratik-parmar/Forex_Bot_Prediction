@@ -30,3 +30,4 @@ yfinance==1.7.0
 channels
 websocket-client
 python-dotenv
+daphne
