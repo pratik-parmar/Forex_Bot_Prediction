@@ -1,159 +1,137 @@
 import pandas as pd
-import numpy as np
 
 
-def calculate_sma(
-    df: pd.DataFrame,
-    period: int = 20,
-    column: str = "close"
-) -> pd.Series:
-    """Calculate Simple Moving Average."""
-    return df[column].rolling(window=period).mean()
-
-
-def calculate_ema(
-    df: pd.DataFrame,
-    period: int = 20,
-    column: str = "close"
-) -> pd.Series:
-    """Calculate Exponential Moving Average."""
-    return df[column].ewm(
-        span=period,
-        adjust=False
-    ).mean()
-
-
-def calculate_rsi(
-    df: pd.DataFrame,
-    period: int = 14,
-    column: str = "close"
-) -> pd.Series:
+def calculate_indicators(data):
     """
-    Calculate RSI using Wilder's smoothing method.
+    Calculate technical indicators for any supported symbol.
+
+    Required columns:
+        Open, High, Low, Close
     """
 
-    delta = df[column].diff()
+    df = data.copy()
+
+    # Normalize column names
+    df.columns = [
+        str(col).strip().title()
+        for col in df.columns
+    ]
+
+    required_columns = [
+        "Open",
+        "High",
+        "Low",
+        "Close"
+    ]
+
+    for column in required_columns:
+        if column not in df.columns:
+            raise ValueError(
+                f"Missing required column: {column}"
+            )
+
+    # Make sure prices are numeric
+    for column in required_columns:
+        df[column] = pd.to_numeric(
+            df[column],
+            errors="coerce"
+        )
+
+    df = df.dropna(
+        subset=required_columns
+    )
+
+    if len(df) < 50:
+        raise ValueError(
+            f"Not enough candles. "
+            f"At least 50 candles are required, "
+            f"received {len(df)}."
+        )
+
+    # =====================================================
+    # EMA 20
+    # =====================================================
+
+    df["EMA_20"] = (
+        df["Close"]
+        .ewm(
+            span=20,
+            adjust=False
+        )
+        .mean()
+    )
+
+    # =====================================================
+    # EMA 50
+    # =====================================================
+
+    df["EMA_50"] = (
+        df["Close"]
+        .ewm(
+            span=50,
+            adjust=False
+        )
+        .mean()
+    )
+
+    # =====================================================
+    # RSI 14
+    # =====================================================
+
+    delta = df["Close"].diff()
 
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
 
-    average_gain = gain.ewm(
-        alpha=1 / period,
-        min_periods=period,
-        adjust=False
-    ).mean()
+    average_gain = (
+        gain
+        .rolling(window=14)
+        .mean()
+    )
 
-    average_loss = loss.ewm(
-        alpha=1 / period,
-        min_periods=period,
-        adjust=False
-    ).mean()
+    average_loss = (
+        loss
+        .rolling(window=14)
+        .mean()
+    )
 
     rs = average_gain / average_loss
 
-    rsi = 100 - (
-        100 / (1 + rs)
+    df["RSI_14"] = (
+        100 -
+        (
+            100 /
+            (1 + rs)
+        )
     )
 
-    return rsi
+    # =====================================================
+    # ATR 14
+    # =====================================================
 
-
-def calculate_atr(
-    df: pd.DataFrame,
-    period: int = 14
-) -> pd.Series:
-    """
-    Calculate Average True Range using
-    the standard True Range calculation.
-    """
-
-    previous_close = df["close"].shift(1)
+    previous_close = df["Close"].shift(1)
 
     true_range = pd.concat(
         [
-            df["high"] - df["low"],
-            (df["high"] - previous_close).abs(),
-            (df["low"] - previous_close).abs()
+            df["High"] - df["Low"],
+
+            (
+                df["High"] -
+                previous_close
+            ).abs(),
+
+            (
+                df["Low"] -
+                previous_close
+            ).abs()
         ],
         axis=1
     ).max(axis=1)
 
-    atr = true_range.ewm(
-        alpha=1 / period,
-        min_periods=period,
-        adjust=False
-    ).mean()
-
-    return atr
-
-
-def calculate_macd(
-    df: pd.DataFrame,
-    fast_period: int = 12,
-    slow_period: int = 26,
-    signal_period: int = 9,
-    column: str = "close",
-) -> pd.DataFrame:
-
-    fast_ema = df[column].ewm(
-        span=fast_period,
-        adjust=False
-    ).mean()
-
-    slow_ema = df[column].ewm(
-        span=slow_period,
-        adjust=False
-    ).mean()
-
-    macd = fast_ema - slow_ema
-
-    signal_line = macd.ewm(
-        span=signal_period,
-        adjust=False
-    ).mean()
-
-    histogram = macd - signal_line
-
-    return pd.DataFrame(
-        {
-            "macd": macd,
-            "macd_signal": signal_line,
-            "macd_hist": histogram
-        },
-        index=df.index
+    df["ATR_14"] = (
+        true_range
+        .rolling(window=14)
+        .mean()
     )
 
-
-def calculate_bollinger_bands(
-    df: pd.DataFrame,
-    period: int = 20,
-    std_dev: int = 2,
-    column: str = "close"
-) -> pd.DataFrame:
-
-    middle_band = calculate_sma(
-        df,
-        period=period,
-        column=column
-    )
-
-    rolling_std = df[column].rolling(
-        window=period
-    ).std()
-
-    upper_band = middle_band + (
-        rolling_std * std_dev
-    )
-
-    lower_band = middle_band - (
-        rolling_std * std_dev
-    )
-
-    return pd.DataFrame(
-        {
-            "bb_upper": upper_band,
-            "bb_middle": middle_band,
-            "bb_lower": lower_band
-        },
-        index=df.index
-    )
+    return df

@@ -1,34 +1,177 @@
-import json
-import asyncio
-import websockets
-from channels.layers import get_channel_layer
+import os
+import requests
+import pandas as pd
 
-async def stream_live_forex_ticks(symbol="EUR_USD", api_key="FINNHUB_API_KEY"):
-    """
-    Connects to live Forex feed WebSocket and broadcasts true real-time ticks
-    directly to the Django Channel group.
-    """
-    channel_layer = get_channel_layer()
-    uri = f"wss://ws.finnhub.io?token={api_key}"
-    
-    async with websockets.connect(uri) as websocket:
-        # Subscribe to currency pair
-        subscribe_msg = json.dumps({"type": "subscribe", "symbol": f"OANDA:{symbol}"})
-        await websocket.send(subscribe_msg)
 
-        while True:
-            response = await websocket.recv()
-            data = json.loads(response)
-            
-            # Filter real-time trade/tick updates
-            if data.get("type") == "trade":
-                for tick in data["data"]:
-                    live_payload = {
-                        "type": "market_tick",  # Function name in consumers.py
-                        "symbol": tick["s"],
-                        "price": tick["p"],
-                        "timestamp": tick["t"]
-                    }
-                    
-                    # Broadcast immediately to all connected UI clients
-                    await channel_layer.group_send("forex_live", live_payload)
+FINNHUB_REST_URL = (
+    "https://finnhub.io/api/v1/forex/candle"
+)
+
+FINNHUB_SYMBOLS = {
+    "XAUUSD": "OANDA:XAU_USD",
+    "EURUSD": "OANDA:EUR_USD",
+    "GBPUSD": "OANDA:GBP_USD",
+}
+
+TIMEFRAME_SECONDS = {
+    "1": 60,
+    "5": 300,
+    "15": 900,
+    "30": 1800,
+    "60": 3600,
+    "D": 86400,
+}
+
+
+def get_market_candles(
+    symbol,
+    timeframe="15"
+):
+
+    symbol = symbol.upper()
+
+    api_key = os.getenv(
+        "FINNHUB_API_KEY",
+        ""
+    ).strip()
+
+    if not api_key:
+        raise ValueError(
+            "FINNHUB_API_KEY is not configured."
+        )
+
+    if timeframe not in TIMEFRAME_SECONDS:
+        raise ValueError(
+            f"Unsupported timeframe: {timeframe}"
+        )
+
+    # =====================================================
+    # FINNHUB SYMBOL
+    # =====================================================
+
+    if symbol in FINNHUB_SYMBOLS:
+
+        resolution = (
+            "D"
+            if timeframe == "D"
+            else timeframe
+        )
+
+        import time
+
+        end_time = int(time.time())
+
+        # Get enough candles for EMA50
+        start_time = (
+            end_time -
+            (
+                TIMEFRAME_SECONDS[timeframe]
+                * 200
+            )
+        )
+
+        response = requests.get(
+            FINNHUB_REST_URL,
+            params={
+                "symbol": FINNHUB_SYMBOLS[symbol],
+                "resolution": resolution,
+                "from": start_time,
+                "to": end_time,
+                "token": api_key,
+            },
+            timeout=15
+        )
+
+        response.raise_for_status()
+
+        payload = response.json()
+
+        if payload.get("s") != "ok":
+            raise ValueError(
+                f"Finnhub candle error: {payload}"
+            )
+
+        df = pd.DataFrame(
+            {
+                "Open": payload["o"],
+                "High": payload["h"],
+                "Low": payload["l"],
+                "Close": payload["c"],
+                "Volume": payload.get(
+                    "v",
+                    []
+                ),
+                "Timestamp": payload["t"],
+            }
+        )
+
+        return df
+
+    # =====================================================
+    # BTCUSD
+    # =====================================================
+
+    if symbol == "BTCUSD":
+
+        url = (
+            "https://finnhub.io/api/v1/crypto/candle"
+        )
+
+        resolution = (
+            "D"
+            if timeframe == "D"
+            else timeframe
+        )
+
+        import time
+
+        end_time = int(time.time())
+
+        start_time = (
+            end_time -
+            (
+                TIMEFRAME_SECONDS[timeframe]
+                * 200
+            )
+        )
+
+        response = requests.get(
+            url,
+            params={
+                "symbol": "BINANCE:BTCUSDT",
+                "resolution": resolution,
+                "from": start_time,
+                "to": end_time,
+                "token": api_key,
+            },
+            timeout=15
+        )
+
+        response.raise_for_status()
+
+        payload = response.json()
+
+        if payload.get("s") != "ok":
+            raise ValueError(
+                f"Finnhub BTC candle error: {payload}"
+            )
+
+        df = pd.DataFrame(
+            {
+                "Open": payload["o"],
+                "High": payload["h"],
+                "Low": payload["l"],
+                "Close": payload["c"],
+                "Volume": payload.get(
+                    "v",
+                    []
+                ),
+                "Timestamp": payload["t"],
+            }
+        )
+
+        return df
+
+    raise ValueError(
+        f"Unsupported market symbol: {symbol}"
+    )

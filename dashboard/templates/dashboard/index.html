@@ -680,10 +680,13 @@
 
 <script>
 
+/* =========================================================
+   GLOBAL VARIABLES
+========================================================= */
+
 let currentSymbol = "XAUUSD";
 
-let currentTvSymbol =
-    "OANDA:XAUUSD";
+let currentTvSymbol = "OANDA:XAUUSD";
 
 let currentTimeframe = "15";
 
@@ -694,9 +697,9 @@ let lastPrice = null;
 let reconnectTimer = null;
 
 
-/* ==========================================
+/* =========================================================
    ASSET DATABASE
-========================================== */
+========================================================= */
 
 const globalAssetDatabase = [
 
@@ -739,76 +742,60 @@ const globalAssetDatabase = [
 ];
 
 
-/* ==========================================
+/* =========================================================
    LIVE PRICE CACHE
-========================================== */
+========================================================= */
 
 const latestMarketPrices = {};
 
 
-/* ==========================================
+/* =========================================================
    CONNECTION STATUS
-========================================== */
+========================================================= */
 
-function updateConnectionStatus(
-    text
-) {
+function updateConnectionStatus(text) {
 
     const marketStatus =
-        document.getElementById(
-            "market-status"
-        );
+        document.getElementById("market-status");
 
     const priceStatus =
-        document.getElementById(
-            "price-status-text"
-        );
+        document.getElementById("price-status-text");
 
     if (marketStatus) {
-
-        marketStatus.innerText =
-            text;
+        marketStatus.innerText = text;
     }
 
     if (priceStatus) {
 
-        priceStatus.innerText =
-            text;
+        priceStatus.innerText = text;
 
-        if (
-            text ===
-            "Real-time Feed Active"
-        ) {
+        if (text === "Real-time Feed Active") {
 
-            priceStatus.style.color =
-                "#26a69a";
+            priceStatus.style.color = "#26a69a";
 
         } else if (
-            text ===
-            "Connection Error"
+            text === "Connection Error" ||
+            text === "API Error"
         ) {
 
-            priceStatus.style.color =
-                "#ef5350";
+            priceStatus.style.color = "#ef5350";
 
         } else {
 
-            priceStatus.style.color =
-                "#f5a623";
+            priceStatus.style.color = "#f5a623";
         }
     }
 }
 
 
-/* ==========================================
+/* =========================================================
    CONNECT DJANGO WEBSOCKET
-========================================== */
+========================================================= */
 
 function connectMarketWebSocket() {
 
     const protocol =
-        window.location.protocol ===
-        "https:"
+        window.location.protocol === "https:"
             ? "wss:"
             : "ws:";
 
@@ -816,219 +803,195 @@ function connectMarketWebSocket() {
         `${protocol}//${window.location.host}` +
         `/ws/dashboard/realtime/`;
 
-    console.log(
-        "[WS] Connecting:",
-        socketUrl
-    );
+    //console.log("[WS] Connecting:", socketUrl);
 
-    updateConnectionStatus(
-        "Connecting..."
-    );
+    updateConnectionStatus("Connecting...");
 
     if (
         marketSocket &&
         (
-            marketSocket.readyState ===
-            WebSocket.OPEN ||
-
-            marketSocket.readyState ===
-            WebSocket.CONNECTING
+            marketSocket.readyState === WebSocket.OPEN ||
+            marketSocket.readyState === WebSocket.CONNECTING
         )
     ) {
-
         return;
     }
 
-    marketSocket =
-        new WebSocket(
-            socketUrl
-        );
+    marketSocket = new WebSocket(socketUrl);
 
 
     /* ------------------------------
        OPEN
     ------------------------------ */
 
-    marketSocket.onopen =
-        function() {
+    marketSocket.onopen = function () {
 
-            console.log(
-                "[WS] Django connected"
-            );
+        //console.log("✅ [WS] Django connected");
 
-            updateConnectionStatus(
-                "Django Connected"
-            );
+        updateConnectionStatus("Django Connected");
 
-            subscribeCurrentSymbol();
-        };
+        subscribeCurrentSymbol();
+
+    };
 
 
     /* ------------------------------
        MESSAGE
     ------------------------------ */
 
-    marketSocket.onmessage =
-        function(event) {
+    marketSocket.onmessage = function(event) {
 
-            try {
+        try {
 
-                const message =
-                    JSON.parse(
-                        event.data
-                    );
+            const message =
+                JSON.parse(event.data);
 
-                console.log(
-                    "[WS] Message:",
-                    message
-                );
+            //console.log("📡 [WS] Message:", message);
 
+
+            /*
+             * MARKET TICK
+             */
+
+            if (message.type === "market_tick") {
+
+                /*
+                 * Only update the selected symbol.
+                 */
 
                 if (
-                    message.type ===
-                    "market_tick"
+                    message.symbol &&
+                    message.symbol.toUpperCase() !==
+                    currentSymbol.toUpperCase()
                 ) {
+                    return;
+                }
 
-                    handleLiveMarketData(
-                        message
-                    );
+                handleLiveMarketData(message);
+
+                updateConnectionStatus(
+                    "Real-time Feed Active"
+                );
+
+                return;
+            }
+
+
+            /*
+             * FEED STATUS
+             */
+
+            if (message.type === "feed_status") {
+
+                //const statusData =
+                    //message.data || message;
+
+                //console.log("[FEED STATUS]",statusData );
+
+                if (
+                    statusData.status === "subscribed"
+                ) {
 
                     updateConnectionStatus(
                         "Real-time Feed Active"
                     );
 
-                    return;
-                }
-
-
-                if (
-                    message.type ===
-                    "feed_status"
+                } else if (
+                    statusData.status === "error"
                 ) {
 
-                    const statusData =
-                        message.data ||
-                        message;
-
-                    console.log(
-                        "[FEED STATUS]",
-                        statusData
+                    updateConnectionStatus(
+                        "Connection Error"
                     );
-
-                    if (
-                        statusData.status ===
-                        "subscribed"
-                    ) {
-
-                        updateConnectionStatus(
-                            "Real-time Feed Active"
-                        );
-
-                    }
-
-                    else if (
-                        statusData.status ===
-                        "error"
-                    ) {
-
-                        updateConnectionStatus(
-                            "Connection Error"
-                        );
-                    }
-
-                    return;
                 }
 
-
-                if (
-                    message.type ===
-                    "status"
-                ) {
-
-                    console.log(
-                        "[DJANGO]",
-                        message.message
-                    );
-
-                }
-
+                return;
             }
 
-            catch (error) {
 
-                console.error(
-                    "[WS] Parse error:",
-                    error
+            /*
+             * GENERIC STATUS
+             */
+
+            if (message.type === "status") {
+
+                console.log(
+                    "[DJANGO]",
+                    message.message
                 );
+
+                return;
             }
-        };
+
+        } catch (error) {
+
+            console.error(
+                "[WS] Parse error:",
+                error
+            );
+        }
+    };
 
 
     /* ------------------------------
        ERROR
     ------------------------------ */
 
-    marketSocket.onerror =
-        function(error) {
+    marketSocket.onerror = function(error) {
 
-            console.error(
-                "[WS] Error:",
-                error
-            );
+        console.error(
+            "❌ [WS] Error:",
+            error
+        );
 
-            updateConnectionStatus(
-                "Connection Error"
-            );
-        };
+        updateConnectionStatus(
+            "Connection Error"
+        );
+    };
 
 
     /* ------------------------------
        CLOSE
     ------------------------------ */
 
-    marketSocket.onclose =
-        function(event) {
+    marketSocket.onclose = function(event) {
 
-            console.warn(
-                "[WS] Closed:",
-                event.code,
-                event.reason
+        console.warn(
+            "⚠️ [WS] Closed:",
+            event.code,
+            event.reason
+        );
+
+        marketSocket = null;
+
+        updateConnectionStatus(
+            "Reconnecting..."
+        );
+
+        if (reconnectTimer) {
+
+            clearTimeout(reconnectTimer);
+        }
+
+        reconnectTimer =
+            setTimeout(
+                connectMarketWebSocket,
+                3000
             );
-
-            marketSocket = null;
-
-            updateConnectionStatus(
-                "Reconnecting..."
-            );
-
-            if (reconnectTimer) {
-
-                clearTimeout(
-                    reconnectTimer
-                );
-            }
-
-            reconnectTimer =
-                setTimeout(
-                    connectMarketWebSocket,
-                    3000
-                );
-        };
+    };
 }
 
 
-/* ==========================================
+/* =========================================================
    SUBSCRIBE CURRENT SYMBOL
-========================================== */
+========================================================= */
 
 function subscribeCurrentSymbol() {
 
     if (
         !marketSocket ||
-        marketSocket.readyState !==
-        WebSocket.OPEN
+        marketSocket.readyState !== WebSocket.OPEN
     ) {
-
         return;
     }
 
@@ -1039,40 +1002,29 @@ function subscribeCurrentSymbol() {
 
     marketSocket.send(
         JSON.stringify({
-
-            action:
-                "change_symbol",
-
-            symbol:
-                currentSymbol
-
+            action: "change_symbol",
+            symbol: currentSymbol
         })
     );
 }
 
 
-/* ==========================================
-   HANDLE LIVE DATA
-========================================== */
+/* =========================================================
+   HANDLE LIVE MARKET DATA
+========================================================= */
 
-function handleLiveMarketData(
-    data
-) {
+function handleLiveMarketData(data) {
 
     if (!data) {
         return;
     }
 
-
-    console.log(
-        "[LIVE DATA]",
-        data
-    );
+    //console.log("📊 [LIVE DATA]",data);
 
 
-    /* ------------------------------
-       PRICE
-    ------------------------------ */
+    /*
+     * PRICE
+     */
 
     if (
         data.price !== undefined &&
@@ -1080,9 +1032,7 @@ function handleLiveMarketData(
     ) {
 
         const price =
-            Number(
-                data.price
-            );
+            Number(data.price);
 
         if (!Number.isNaN(price)) {
 
@@ -1091,9 +1041,7 @@ function handleLiveMarketData(
                     ? data.symbol.toUpperCase()
                     : currentSymbol.toUpperCase();
 
-            latestMarketPrices[
-                symbol
-            ] = price;
+            latestMarketPrices[symbol] = price;
 
 
             if (
@@ -1101,68 +1049,58 @@ function handleLiveMarketData(
                 currentSymbol.toUpperCase()
             ) {
 
-                updateLivePriceDisplay(
-                    price
-                );
+                updateLivePriceDisplay(price);
             }
         }
     }
 
 
-    /* ------------------------------
-       INDICATORS
-    ------------------------------ */
+    /*
+     * INDICATORS
+     */
 
     setText(
         "ema20",
-        data.ema_20
+        formatIndicator(data.ema_20)
     );
 
     setText(
         "ema50",
-        data.ema_50
+        formatIndicator(data.ema_50)
     );
 
     setText(
         "rsi",
-        data.rsi_14
+        formatIndicator(data.rsi_14)
     );
 
     setText(
         "atr",
-        data.atr_14
+        formatIndicator(data.atr_14)
     );
 
 
-    /* ------------------------------
-       SIGNAL
-    ------------------------------ */
+    /*
+     * SIGNAL
+     */
 
-    if (
-        data.signal !== undefined
-    ) {
+    if (data.signal !== undefined) {
 
         const signal =
-            document.getElementById(
-                "signal"
-            );
+            document.getElementById("signal");
 
         if (signal) {
 
             signal.innerText =
                 data.signal;
 
-            if (
-                data.signal ===
-                "BUY"
-            ) {
+            if (data.signal === "BUY") {
 
                 signal.style.color =
                     "#26a69a";
 
             } else if (
-                data.signal ===
-                "SELL"
+                data.signal === "SELL"
             ) {
 
                 signal.style.color =
@@ -1177,25 +1115,329 @@ function handleLiveMarketData(
     }
 
 
+    /*
+     * SIGNAL REASON
+     */
+
     setText(
         "signal-reason",
-        data.reason
+        data.reason || "Waiting for market data..."
     );
+
+
+    /*
+     * Entry / SL / TP
+     *
+     * These may come from the technical-analysis API.
+     */
+
+    if (data.entry !== undefined) {
+
+        setText(
+            "entry",
+            formatPrice(data.entry)
+        );
+    }
+
+    if (data.stop_loss !== undefined) {
+
+        setText(
+            "stop-loss",
+            formatPrice(data.stop_loss)
+        );
+    }
+
+    if (data.take_profit !== undefined) {
+
+        setText(
+            "take-profit",
+            formatPrice(data.take_profit)
+        );
+    }
 }
 
 
-/* ==========================================
-   UPDATE PRICE
-========================================== */
+/* =========================================================
+   LOAD TECHNICAL ANALYSIS
+========================================================= */
 
-function updateLivePriceDisplay(
-    price
-) {
+async function loadTechnicalAnalysis() {
+
+    console.log(
+        "[API] Loading technical analysis:",
+        currentSymbol,
+        currentTimeframe
+    );
+
+    /*
+     * Show loading state.
+     */
+
+    setText("ema20", "Loading...");
+    setText("ema50", "Loading...");
+    setText("rsi", "Loading...");
+    setText("atr", "Loading...");
+
+    setText(
+        "signal",
+        "HOLD"
+    );
+
+    setText(
+        "signal-reason",
+        "Loading market analysis..."
+    );
+
+    setText("entry", "--");
+    setText("stop-loss", "--");
+    setText("take-profit", "--");
+
+
+    try {
+
+        const url =
+            `/api/technical-analysis/` +
+            `?symbol=${encodeURIComponent(currentSymbol)}` +
+            `&timeframe=${encodeURIComponent(currentTimeframe)}`;
+
+        console.log(
+            "[API] Request:",
+            url
+        );
+
+        const response =
+            await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                },
+                cache: "no-store"
+            });
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+        console.log(
+            "📈 [TECHNICAL ANALYSIS]",
+            data
+        );
+
+
+        /*
+         * Handle backend error response.
+         */
+
+        if (data.error) {
+
+            throw new Error(
+                data.error
+            );
+        }
+
+
+        /*
+         * Update indicators.
+         */
+
+        setText(
+            "ema20",
+            formatIndicator(
+                data.ema_20
+            )
+        );
+
+        setText(
+            "ema50",
+            formatIndicator(
+                data.ema_50
+            )
+        );
+
+        setText(
+            "rsi",
+            formatIndicator(
+                data.rsi_14
+            )
+        );
+
+        setText(
+            "atr",
+            formatIndicator(
+                data.atr_14
+            )
+        );
+
+
+        /*
+         * Signal
+         */
+
+        const signalValue =
+            data.signal || "HOLD";
+
+        const signalElement =
+            document.getElementById("signal");
+
+        if (signalElement) {
+
+            signalElement.innerText =
+                signalValue;
+
+            if (
+                signalValue === "BUY"
+            ) {
+
+                signalElement.style.color =
+                    "#26a69a";
+
+            } else if (
+                signalValue === "SELL"
+            ) {
+
+                signalElement.style.color =
+                    "#ef5350";
+
+            } else {
+
+                signalElement.style.color =
+                    "#ffffff";
+            }
+        }
+
+
+        /*
+         * Signal reason
+         */
+
+        setText(
+            "signal-reason",
+            data.reason ||
+            "No trading signal."
+        );
+
+
+        /*
+         * Entry
+         */
+
+        setText(
+            "entry",
+            formatPrice(data.entry)
+        );
+
+
+        /*
+         * Stop Loss
+         */
+
+        setText(
+            "stop-loss",
+            formatPrice(data.stop_loss)
+        );
+
+
+        /*
+         * Take Profit
+         */
+
+        setText(
+            "take-profit",
+            formatPrice(data.take_profit)
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ [TECHNICAL API ERROR]",
+            error
+        );
+
+        setText("ema20", "--");
+        setText("ema50", "--");
+        setText("rsi", "--");
+        setText("atr", "--");
+
+        setText(
+            "signal",
+            "HOLD"
+        );
+
+        setText(
+            "signal-reason",
+            `Unable to load analysis: ${error.message}`
+        );
+
+        setText("entry", "--");
+        setText("stop-loss", "--");
+        setText("take-profit", "--");
+    }
+}
+
+
+/* =========================================================
+   LOAD LIVE PRICE
+========================================================= */
+
+async function loadLivePrice() {
+
+    /*
+     * If WebSocket already supplied a price,
+     * don't overwrite it unnecessarily.
+     */
+
+    const cachedPrice =
+        latestMarketPrices[
+            currentSymbol.toUpperCase()
+        ];
+
+    if (
+        cachedPrice !== undefined &&
+        cachedPrice !== null
+    ) {
+
+        updateLivePriceDisplay(
+            cachedPrice
+        );
+
+        return;
+    }
+
+
+    /*
+     * No cached price yet.
+     *
+     * WebSocket will provide the real-time price.
+     */
 
     const element =
-        document.getElementById(
-            "live-price"
-        );
+        document.getElementById("live-price");
+
+    if (element) {
+
+        element.innerText =
+            "Waiting...";
+    }
+}
+
+
+/* =========================================================
+   UPDATE LIVE PRICE DISPLAY
+========================================================= */
+
+function updateLivePriceDisplay(price) {
+
+    const element =
+        document.getElementById("live-price");
 
     if (!element) {
         return;
@@ -1208,32 +1450,50 @@ function updateLivePriceDisplay(
     }
 
 
-    element.innerText =
-        `$${price.toLocaleString(
-            "en-US",
-            {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 5
-            }
-        )}`;
+    /*
+     * Different symbols have different
+     * sensible decimal precision.
+     */
 
+    let decimals = 2;
 
     if (
-        lastPrice !== null
+        currentSymbol === "EURUSD" ||
+        currentSymbol === "GBPUSD"
     ) {
 
-        if (
-            price >
-            lastPrice
-        ) {
+        decimals = 5;
+
+    } else if (
+        currentSymbol === "BTCUSD"
+    ) {
+
+        decimals = 2;
+    }
+
+
+    element.innerText =
+        price.toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }
+        );
+
+
+    /*
+     * Price movement indication.
+     */
+
+    if (lastPrice !== null) {
+
+        if (price > lastPrice) {
 
             element.className =
                 "card-value price-up";
 
-        } else if (
-            price <
-            lastPrice
-        ) {
+        } else if (price < lastPrice) {
 
             element.className =
                 "card-value price-down";
@@ -1246,86 +1506,177 @@ function updateLivePriceDisplay(
     }
 
 
-    lastPrice =
-        price;
+    lastPrice = price;
 }
 
 
-/* ==========================================
+/* =========================================================
    SAFE HTML UPDATE
-========================================== */
+========================================================= */
 
-function setText(
-    elementId,
-    value
-) {
-
-    if (
-        value === undefined ||
-        value === null
-    ) {
-
-        return;
-    }
+function setText(elementId, value) {
 
     const element =
         document.getElementById(
             elementId
         );
 
-    if (element) {
-
-        element.innerText =
-            value;
+    if (!element) {
+        return;
     }
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+
+        element.innerText = "--";
+
+        return;
+    }
+
+    element.innerText =
+        value;
 }
 
 
-/* ==========================================
-   SELECT ASSET
-========================================== */
+/* =========================================================
+   FORMAT INDICATOR
+========================================================= */
 
-function selectAsset(
-    symbol
-) {
+function formatIndicator(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === "-" ||
+        value === ""
+    ) {
+
+        return "--";
+    }
+
+    const number =
+        Number(value);
+
+    if (Number.isNaN(number)) {
+
+        return value;
+    }
+
+    return number.toFixed(2);
+}
+
+
+/* =========================================================
+   FORMAT PRICE
+========================================================= */
+
+function formatPrice(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        value === "-"
+    ) {
+
+        return "--";
+    }
+
+    const number =
+        Number(value);
+
+    if (Number.isNaN(number)) {
+
+        return "--";
+    }
+
+
+    /*
+     * Forex requires more decimal places.
+     */
+
+    if (
+        currentSymbol === "EURUSD" ||
+        currentSymbol === "GBPUSD"
+    ) {
+
+        return number.toFixed(5);
+    }
+
+
+    return number.toFixed(2);
+}
+
+
+/* =========================================================
+   SELECT ASSET
+========================================================= */
+
+function selectAsset(symbol) {
 
     const asset =
         globalAssetDatabase.find(
             item =>
-                item.symbol ===
-                symbol
+                item.symbol === symbol
         );
 
     if (!asset) {
 
         console.error(
-            "Asset not found:",
+            "[ASSET] Unknown symbol:",
             symbol
         );
 
         return;
     }
 
+    selectAssetSymbol(
+        asset.symbol,
+        asset.desc,
+        asset.tvSymbol
+    );
+}
+
+
+/* =========================================================
+   SELECT ASSET SYMBOL
+========================================================= */
+
+function selectAssetSymbol(
+    symbol,
+    desc,
+    tvSymbol
+) {
 
     console.log(
-        "[ASSET] Switching:",
-        currentSymbol,
-        "->",
-        asset.symbol
+        "🔄 Selected symbol:",
+        symbol
     );
 
 
+    /*
+     * Update global state.
+     */
+
     currentSymbol =
-        asset.symbol;
+        symbol.toUpperCase();
 
     currentTvSymbol =
-        asset.tvSymbol;
+        tvSymbol;
 
+
+    /*
+     * Reset previous price.
+     */
 
     lastPrice = null;
 
 
-    /* UI */
+    /*
+     * Update UI labels.
+     */
 
     const searchLabel =
         document.getElementById(
@@ -1335,7 +1686,7 @@ function selectAsset(
     if (searchLabel) {
 
         searchLabel.innerText =
-            `${asset.symbol} — ${asset.desc}`;
+            `${symbol} — ${desc}`;
     }
 
 
@@ -1347,7 +1698,7 @@ function selectAsset(
     if (chartTitle) {
 
         chartTitle.innerText =
-            asset.symbol;
+            symbol;
     }
 
 
@@ -1359,7 +1710,7 @@ function selectAsset(
     if (chartDescription) {
 
         chartDescription.innerText =
-            asset.desc;
+            desc;
     }
 
 
@@ -1371,28 +1722,44 @@ function selectAsset(
     if (cardTitle) {
 
         cardTitle.innerText =
-            `${asset.symbol} PRICE (LIVE)`;
+            `${symbol} PRICE (LIVE)`;
     }
 
 
-    const livePrice =
-        document.getElementById(
-            "live-price"
-        );
+    /*
+     * Reset dashboard values while loading.
+     */
 
-    if (livePrice) {
+    setText("live-price", "Loading...");
 
-        livePrice.innerText =
-            "Connecting...";
-    }
+    setText("ema20", "--");
+    setText("ema50", "--");
+    setText("rsi", "--");
+    setText("atr", "--");
+
+    setText("signal", "HOLD");
+
+    setText(
+        "signal-reason",
+        "Loading market analysis..."
+    );
+
+    setText("entry", "--");
+    setText("stop-loss", "--");
+    setText("take-profit", "--");
 
 
-    /* TradingView */
+    /*
+     * Reload TradingView.
+     */
 
     initTradingViewWidget();
 
 
-    /* Finnhub */
+    /*
+     * Tell Django WebSocket about
+     * the newly selected symbol.
+     */
 
     if (
         marketSocket &&
@@ -1400,21 +1767,51 @@ function selectAsset(
         WebSocket.OPEN
     ) {
 
-        subscribeCurrentSymbol();
+        console.log(
+            "[WS] Switching symbol:",
+            currentSymbol
+        );
+
+        marketSocket.send(
+            JSON.stringify({
+                action: "change_symbol",
+                symbol: currentSymbol
+            })
+        );
 
     } else {
 
-        connectMarketWebSocket();
+        console.log(
+            "[WS] Socket not ready"
+        );
     }
 
+
+    /*
+     * Load candle-based technical analysis.
+     */
+
+    loadTechnicalAnalysis();
+
+
+    /*
+     * Load live price.
+     */
+
+    loadLivePrice();
+
+
+    /*
+     * Close search modal.
+     */
 
     closeSymbolSearchModal();
 }
 
 
-/* ==========================================
+/* =========================================================
    SEARCH MODAL
-========================================== */
+========================================================= */
 
 function openSymbolSearchModal() {
 
@@ -1466,9 +1863,11 @@ function handleModalBackdropClick(
 }
 
 
-function filterAssets(
-    query
-) {
+/* =========================================================
+   FILTER ASSETS
+========================================================= */
+
+function filterAssets(query) {
 
     const q =
         query
@@ -1478,18 +1877,14 @@ function filterAssets(
     const filtered =
         globalAssetDatabase.filter(
             asset =>
-
                 asset.symbol
                     .toLowerCase()
                     .includes(q)
-
                 ||
-
                 asset.desc
                     .toLowerCase()
                     .includes(q)
         );
-
 
     renderAssetList(
         filtered
@@ -1497,9 +1892,11 @@ function filterAssets(
 }
 
 
-function renderAssetList(
-    list
-) {
+/* =========================================================
+   RENDER ASSET LIST
+========================================================= */
+
+function renderAssetList(list) {
 
     const container =
         document.getElementById(
@@ -1510,9 +1907,7 @@ function renderAssetList(
         return;
     }
 
-
-    container.innerHTML =
-        "";
+    container.innerHTML = "";
 
 
     list.forEach(
@@ -1524,19 +1919,20 @@ function renderAssetList(
                 ];
 
 
-            const decimals =
-                asset.symbol ===
-                    "EURUSD"
-                    ||
-                asset.symbol ===
-                    "GBPUSD"
-                    ? 5
-                    : 2;
+            let decimals = 2;
+
+            if (
+                asset.symbol === "EURUSD" ||
+                asset.symbol === "GBPUSD"
+            ) {
+
+                decimals = 5;
+            }
 
 
             const priceText =
                 price !== undefined
-                    ? `$${price.toFixed(decimals)}`
+                    ? price.toFixed(decimals)
                     : "Syncing...";
 
 
@@ -1544,7 +1940,6 @@ function renderAssetList(
                 document.createElement(
                     "div"
                 );
-
 
             row.className =
                 "tv-result-item";
@@ -1561,31 +1956,21 @@ function renderAssetList(
 
             row.innerHTML = `
 
-                <span
-                    class="tv-res-symbol"
-                >
+                <span class="tv-res-symbol">
                     ${asset.symbol}
                 </span>
 
-                <span
-                    class="tv-res-desc"
-                >
+                <span class="tv-res-desc">
                     ${asset.desc}
                 </span>
 
-                <span
-                    class="tv-res-price"
-                >
+                <span class="tv-res-price">
                     ${priceText}
                 </span>
 
-                <span
-                    class="tv-res-meta"
-                >
+                <span class="tv-res-meta">
 
-                    <span
-                        class="tv-badge"
-                    >
+                    <span class="tv-badge">
                         ${asset.badge}
                     </span>
 
@@ -1597,7 +1982,6 @@ function renderAssetList(
 
             `;
 
-
             container.appendChild(
                 row
             );
@@ -1606,9 +1990,9 @@ function renderAssetList(
 }
 
 
-/* ==========================================
+/* =========================================================
    TRADINGVIEW
-========================================== */
+========================================================= */
 
 function initTradingViewWidget() {
 
@@ -1622,8 +2006,7 @@ function initTradingViewWidget() {
     }
 
 
-    container.innerHTML =
-        "";
+    container.innerHTML = "";
 
 
     const isLight =
@@ -1676,19 +2059,32 @@ function initTradingViewWidget() {
             container_id:
                 "tradingview_chart"
         });
+
+    } else {
+
+        console.warn(
+            "[TradingView] Library not loaded yet."
+        );
     }
 }
 
 
-/* ==========================================
+/* =========================================================
    TIMEFRAME
-========================================== */
+========================================================= */
 
 function changeTimeframe(
     tfValue,
     tfLabel,
     btnElement
 ) {
+
+    console.log(
+        "[TIMEFRAME]",
+        tfValue,
+        tfLabel
+    );
+
 
     currentTimeframe =
         tfValue;
@@ -1705,6 +2101,10 @@ function changeTimeframe(
             tfLabel;
     }
 
+
+    /*
+     * Update active button.
+     */
 
     document
         .querySelectorAll(
@@ -1726,13 +2126,26 @@ function changeTimeframe(
     }
 
 
+    /*
+     * Reload TradingView.
+     */
+
     initTradingViewWidget();
+
+
+    /*
+     * IMPORTANT:
+     * Reload technical indicators
+     * for the selected timeframe.
+     */
+
+    loadTechnicalAnalysis();
 }
 
 
-/* ==========================================
+/* =========================================================
    THEME
-========================================== */
+========================================================= */
 
 function toggleTheme() {
 
@@ -1744,9 +2157,9 @@ function toggleTheme() {
 }
 
 
-/* ==========================================
+/* =========================================================
    NAVIGATION
-========================================== */
+========================================================= */
 
 function switchSection(
     sectionId,
@@ -1817,13 +2230,11 @@ function switchSection(
 }
 
 
-/* ==========================================
+/* =========================================================
    AUTH
-========================================== */
+========================================================= */
 
-function toggleAuthDropdown(
-    event
-) {
+function toggleAuthDropdown(event) {
 
     event.stopPropagation();
 
@@ -1866,6 +2277,10 @@ function handleGoogleCredentialResponse(
 }
 
 
+/* =========================================================
+   CLOSE AUTH DROPDOWN
+========================================================= */
+
 document.addEventListener(
     "click",
     function(event) {
@@ -1890,17 +2305,79 @@ document.addEventListener(
 );
 
 
-/* ==========================================
-   START
-========================================== */
+/* =========================================================
+   PERIODIC TECHNICAL ANALYSIS REFRESH
+========================================================= */
+
+setInterval(
+    function() {
+
+        console.log(
+            "[AUTO] Refreshing technical analysis"
+        );
+
+        loadTechnicalAnalysis();
+
+    },
+    60000
+);
+
+
+/* =========================================================
+   PERIODIC ASSET SEARCH PRICE REFRESH
+========================================================= */
+
+setInterval(
+    function() {
+
+        renderAssetList(
+            globalAssetDatabase
+        );
+
+    },
+    5000
+);
+
+
+/* =========================================================
+   START APPLICATION
+========================================================= */
 
 window.addEventListener(
     "DOMContentLoaded",
     function() {
 
+        console.log(
+            "🚀 Forex Dashboard starting..."
+        );
+
+
+        /*
+         * Start TradingView.
+         */
+
         initTradingViewWidget();
 
+
+        /*
+         * Start Django WebSocket.
+         */
+
         connectMarketWebSocket();
+
+
+        /*
+         * Load initial technical analysis.
+         */
+
+        loadTechnicalAnalysis();
+
+
+        /*
+         * Initial live price.
+         */
+
+        loadLivePrice();
 
     }
 );
