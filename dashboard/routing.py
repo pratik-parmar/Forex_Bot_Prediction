@@ -1,6 +1,13 @@
-from django.urls import re_path
-from . import consumers
+from django.urls import path
+
+from .consumers import MarketConsumer
+
 
 websocket_urlpatterns = [
-    re_path(r'^ws/dashboard/realtime/$', consumers.ForexLiveConsumer.as_asgi()),
+
+    path(
+        "ws/dashboard/realtime/",
+        MarketConsumer.as_asgi()
+    ),
+
 ]
