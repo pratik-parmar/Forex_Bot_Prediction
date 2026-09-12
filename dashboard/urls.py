@@ -1,6 +1,7 @@
 from django.urls import path
 
 from . import views
+
 from .market_api import (
     live_price,
     market_candles,
@@ -9,24 +10,47 @@ from .market_api import (
 
 urlpatterns = [
 
-    # Dashboard
+    # =================================================
+    # DASHBOARD
+    # =================================================
+
     path(
         "",
         views.dashboard_index,
         name="dashboard_index"
     ),
 
-    # Live price
+
+    # =================================================
+    # TECHNICAL ANALYSIS
+    # =================================================
+
+    path(
+        "api/technical-analysis/",
+        views.technical_analysis,
+        name="technical_analysis"
+    ),
+
+
+    # =================================================
+    # LIVE PRICE
+    # =================================================
+
     path(
         "api/live-price/",
         live_price,
         name="live_price"
     ),
 
-    # Candles
+
+    # =================================================
+    # MARKET CANDLES
+    # =================================================
+
     path(
         "api/market-candles/",
         market_candles,
         name="market_candles"
     ),
+
 ]

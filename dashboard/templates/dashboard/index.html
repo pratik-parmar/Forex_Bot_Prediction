@@ -748,6 +748,8 @@ const globalAssetDatabase = [
 
 const latestMarketPrices = {};
 
+const marketPriceStatus = {};
+
 
 /* =========================================================
    CONNECTION STATUS
@@ -855,18 +857,9 @@ function connectMarketWebSocket() {
 
             if (message.type === "market_tick") {
 
-                /*
-                 * Only update the selected symbol.
-                 */
-
-                if (
-                    message.symbol &&
-                    message.symbol.toUpperCase() !==
-                    currentSymbol.toUpperCase()
-                ) {
-                    return;
-                }
-
+                // Store ticks for every subscribed symbol.
+                // The selected symbol is updated on the main card,
+                // while the search modal keeps prices for all markets.
                 handleLiveMarketData(message);
 
                 updateConnectionStatus(
@@ -883,10 +876,13 @@ function connectMarketWebSocket() {
 
             if (message.type === "feed_status") {
 
-                //const statusData =
-                    //message.data || message;
+                const statusData =
+                    message.data || message;
 
-                //console.log("[FEED STATUS]",statusData );
+                console.log(
+                    "[FEED STATUS]",
+                    statusData
+                );
 
                 if (
                     statusData.status === "subscribed"
@@ -1042,6 +1038,12 @@ function handleLiveMarketData(data) {
                     : currentSymbol.toUpperCase();
 
             latestMarketPrices[symbol] = price;
+
+            marketPriceStatus[symbol] = {
+                source: "live",
+                marketOpen: true,
+                marketState: "REGULAR"
+            };
 
 
             if (
@@ -1390,16 +1392,13 @@ async function loadTechnicalAnalysis() {
 
 async function loadLivePrice() {
 
-    /*
-     * If WebSocket already supplied a price,
-     * don't overwrite it unnecessarily.
-     */
+    const symbol =
+        currentSymbol.toUpperCase();
 
     const cachedPrice =
-        latestMarketPrices[
-            currentSymbol.toUpperCase()
-        ];
+        latestMarketPrices[symbol];
 
+    // WebSocket is the preferred source.
     if (
         cachedPrice !== undefined &&
         cachedPrice !== null
@@ -1412,20 +1411,69 @@ async function loadLivePrice() {
         return;
     }
 
+    // No WebSocket tick yet. This is normal when a market is closed.
+    // Ask Django/Yahoo for the latest available price instead.
+    try {
 
-    /*
-     * No cached price yet.
-     *
-     * WebSocket will provide the real-time price.
-     */
+        const response =
+            await fetch(
+                `/api/live-price/?symbol=${encodeURIComponent(symbol)}`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        if (
+            data.success &&
+            data.price !== undefined &&
+            data.price !== null
+        ) {
+
+            const price =
+                Number(data.price);
+
+            latestMarketPrices[symbol] = price;
+
+            marketPriceStatus[symbol] = {
+                source: data.price_source || "last_close",
+                marketOpen: Boolean(data.market_open),
+                marketState: data.market_state || "CLOSED",
+                previousClose: data.previous_close,
+                lastClose: data.last_close
+            };
+
+            updateLivePriceDisplay(
+                price
+            );
+
+            renderAssetList(
+                globalAssetDatabase
+            );
+
+            return;
+        }
+
+    } catch (error) {
+
+        console.warn(
+            "[LIVE PRICE] REST fallback failed:",
+            error
+        );
+    }
 
     const element =
-        document.getElementById("live-price");
+        document.getElementById(
+            "live-price"
+        );
 
     if (element) {
-
-        element.innerText =
-            "Waiting...";
+        element.innerText = "Unavailable";
     }
 }
 
@@ -1483,8 +1531,86 @@ function updateLivePriceDisplay(price) {
 
 
     /*
+     * Show whether the displayed price is live or
+     * the last available closing price.
+     */
+
+    const cardTitle =
+        document.getElementById(
+            "card-symbol-title"
+        );
+
+    if (cardTitle) {
+
+        const status =
+            marketPriceStatus[
+                currentSymbol.toUpperCase()
+            ];
+
+        if (
+            status &&
+            status.source === "live"
+        ) {
+
+            cardTitle.innerText =
+                `${currentSymbol} PRICE (LIVE)`;
+
+        } else if (
+            status &&
+            status.source === "last_close"
+        ) {
+
+            cardTitle.innerText =
+                `${currentSymbol} PRICE (LAST CLOSE)`;
+
+        } else {
+
+            cardTitle.innerText =
+                `${currentSymbol} PRICE`;
+        }
+    }
+
+
+    /*
      * Price movement indication.
      */
+
+    const priceStatusElement =
+        document.getElementById(
+            "price-status-text"
+        );
+
+    if (priceStatusElement) {
+
+        const status =
+            marketPriceStatus[
+                currentSymbol.toUpperCase()
+            ];
+
+        if (
+            status &&
+            status.source === "last_close"
+        ) {
+
+            priceStatusElement.innerText =
+                "Market Closed • Last Close";
+
+            priceStatusElement.style.color =
+                "#f5a623";
+
+        } else if (
+            status &&
+            status.source === "live"
+        ) {
+
+            priceStatusElement.innerText =
+                "Real-time Feed Active";
+
+            priceStatusElement.style.color =
+                "#26a69a";
+        }
+    }
+
 
     if (lastPrice !== null) {
 
@@ -1722,7 +1848,7 @@ function selectAssetSymbol(
     if (cardTitle) {
 
         cardTitle.innerText =
-            `${symbol} PRICE (LIVE)`;
+            `${symbol} PRICE`;
     }
 
 
@@ -1810,6 +1936,78 @@ function selectAssetSymbol(
 
 
 /* =========================================================
+   LOAD FALLBACK PRICES FOR ALL SYMBOLS
+========================================================= */
+
+async function loadAllMarketFallbackPrices() {
+
+    const symbols = [
+        "XAUUSD",
+        "EURUSD",
+        "GBPUSD",
+        "BTCUSD"
+    ];
+
+    for (const symbol of symbols) {
+
+        // A current WebSocket tick is better than REST fallback.
+        if (
+            latestMarketPrices[symbol] !== undefined &&
+            latestMarketPrices[symbol] !== null &&
+            marketPriceStatus[symbol] &&
+            marketPriceStatus[symbol].source === "live"
+        ) {
+            continue;
+        }
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/live-price/?symbol=${symbol}`
+                );
+
+            if (!response.ok) {
+                continue;
+            }
+
+            const data =
+                await response.json();
+
+            if (
+                data.success &&
+                data.price !== undefined &&
+                data.price !== null
+            ) {
+
+                latestMarketPrices[symbol] =
+                    Number(data.price);
+
+                marketPriceStatus[symbol] = {
+                    source: data.price_source || "last_close",
+                    marketOpen: Boolean(data.market_open),
+                    marketState: data.market_state || "CLOSED",
+                    previousClose: data.previous_close,
+                    lastClose: data.last_close
+                };
+            }
+
+        } catch (error) {
+
+            console.warn(
+                `[MARKET] ${symbol} fallback failed:`,
+                error
+            );
+        }
+    }
+
+    renderAssetList(
+        globalAssetDatabase
+    );
+}
+
+
+/* =========================================================
    SEARCH MODAL
 ========================================================= */
 
@@ -1830,6 +2028,10 @@ function openSymbolSearchModal() {
     renderAssetList(
         globalAssetDatabase
     );
+
+    // Fill symbols that do not currently have a WebSocket tick
+    // (for example closed FX/gold markets on Saturday).
+    loadAllMarketFallbackPrices();
 }
 
 
@@ -1930,10 +2132,27 @@ function renderAssetList(list) {
             }
 
 
+            const status =
+                marketPriceStatus[asset.symbol];
+
+            const hasPrice =
+                price !== undefined &&
+                price !== null &&
+                !Number.isNaN(Number(price));
+
             const priceText =
-                price !== undefined
-                    ? price.toFixed(decimals)
+                hasPrice
+                    ? Number(price).toFixed(decimals)
                     : "Syncing...";
+
+            const priceLabel =
+                hasPrice &&
+                status &&
+                status.source === "live"
+                    ? "LIVE"
+                    : hasPrice
+                        ? "LAST CLOSE"
+                        : "";
 
 
             const row =
@@ -1966,6 +2185,7 @@ function renderAssetList(list) {
 
                 <span class="tv-res-price">
                     ${priceText}
+                    ${priceLabel ? `<small style="display:block;font-size:9px;opacity:.65;margin-top:2px;">${priceLabel}</small>` : ""}
                 </span>
 
                 <span class="tv-res-meta">
@@ -2340,6 +2560,20 @@ setInterval(
 
 
 /* =========================================================
+   PERIODIC CLOSED-MARKET FALLBACK REFRESH
+========================================================= */
+
+setInterval(
+    function() {
+
+        loadAllMarketFallbackPrices();
+
+    },
+    60000
+);
+
+
+/* =========================================================
    START APPLICATION
 ========================================================= */
 
@@ -2378,6 +2612,13 @@ window.addEventListener(
          */
 
         loadLivePrice();
+
+        /*
+         * Load last available prices for all symbols that
+         * are not currently sending WebSocket ticks.
+         */
+
+        loadAllMarketFallbackPrices();
 
     }
 );
