@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Trading Dashboard - Mutual Funds</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #131722;
+            color: #d1d4dc;
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* Sidebar */
+        
+        .sidebar {
+            width: 220px;
+            background: #181c27;
+            border-right: 1px solid #2a2e39;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 0;
+        }
+        
+        .sidebar-brand {
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            padding: 0 20px 20px 20px;
+            border-bottom: 1px solid #2a2e39;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 20px 0;
+            margin: 0;
+        }
+        
+        .sidebar-menu li a {
+            display: block;
+            padding: 12px 20px;
+            color: #9398a2;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .sidebar-menu li.active a,
+        .sidebar-menu li a:hover {
+            background: #2a2e39;
+            color: #fff;
+            border-left: 3px solid #2962ff;
+        }
+        /* Main Content */
+        
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .top-navbar {
+            height: 60px;
+            background: #181c27;
+            border-bottom: 1px solid #2a2e39;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        
+        .top-navbar h2 {
+            margin: 0;
+            font-size: 18px;
+            color: #fff;
+        }
+        
+        .content-body {
+            padding: 24px;
+        }
+        /* TradingView Style Search Bar Trigger */
+        
+        .tv-search-bar {
+            background: #1e222d;
+            border: 1px solid #2a2e39;
+            border-radius: 8px;
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            margin-bottom: 24px;
+            transition: border-color 0.2s;
+        }
+        
+        .tv-search-bar:hover {
+            border-color: #2962ff;
+        }
+        
+        .tv-search-bar span {
+            color: #9398a2;
+            font-size: 14px;
+        }
+        /* Modal Overlay */
+        
+        #symbol-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 80px;
+        }
+        
+        .modal-content {
+            background: #1e222d;
+            border: 1px solid #2a2e39;
+            border-radius: 8px;
+            width: 650px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+        }
+        
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #2a2e39;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-size: 16px;
+            color: #fff;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: #9398a2;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .search-input-wrapper {
+            padding: 16px;
+            border-bottom: 1px solid #2a2e39;
+        }
+        
+        .search-input-wrapper input {
+            width: 100%;
+            background: #131722;
+            border: 1px solid #363c4e;
+            border-radius: 6px;
+            padding: 12px;
+            color: #d1d4dc;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        
+        .search-input-wrapper input:focus {
+            border-color: #2962ff;
+        }
+        
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            padding: 12px 16px;
+            border-bottom: 1px solid #2a2e39;
+            background: #161a25;
+        }
+        
+        .filter-tab {
+            background: none;
+            border: none;
+            color: #9398a2;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .filter-tab.active {
+            background: #2a2e39;
+            color: #fff;
+        }
+        
+        .results-list {
+            max-height: 380px;
+            overflow-y: auto;
+        }
+        
+        .result-item {
+            padding: 14px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1a1e29;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .result-item:hover {
+            background: #2a2e39;
+        }
+        
+        .item-symbol {
+            font-weight: bold;
+            color: #2962ff;
+            font-size: 15px;
+        }
+        
+        .item-desc {
+            color: #9398a2;
+            font-size: 13px;
+            margin-top: 3px;
+        }
+        
+        .item-tag {
+            font-size: 11px;
+            background: #2a2e39;
+            padding: 3px 8px;
+            border-radius: 4px;
+            color: #9398a2;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-brand">Forex Terminal</div>
+        <ul class="sidebar-menu">
+            <li><a href="#">Dashboard</a></li>
+            <li><a href="#">Markets</a></li>
+            <li><a href="#">Signals</a></li>
+            <li><a href="#">Trades</a></li>
+            <li class="active"><a href="#">Mutual Funds</a></li>
+            <li><a href="#">Settings</a></li>
+        </ul>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <div class="top-navbar">
+            <h2>Trading Dashboard</h2>
+            <div style="font-size: 13px; color: #26a69a;">● Connected</div>
+        </div>
+
+        <div class="content-body">
+            <h3 style="color: #fff; margin-top: 0; font-size: 15px;">🌐 Global & Indian Mutual Funds (SEBI Registered / US ETFs)</h3>
+
+            <!-- TradingView Style Search Trigger Bar -->
+            <div class="tv-search-bar" onclick="openModal()">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 16px;">🔍</span>
+                    <span>Search Symbol, ISIN, or Fund Name (e.g., SBI Bluechip, SPY, QQQ)...</span>
+                </div>
+                <span style="background: #2a2e39; padding: 4px 8px; border-radius: 4px; font-size: 12px; color: #9398a2;">Ctrl + K</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="symbol-modal" onclick="outsideClick(event)">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Symbol search</h3>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+            </div>
+            <div class="search-input-wrapper">
+                <input type="text" id="fund-search-input" placeholder="Search Symbol, ISIN, or Fund Name..." onkeyup="filterFunds()">
+            </div>
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="setTab(this, 'all')">All</button>
+                <button class="filter-tab" onclick="setTab(this, 'fund')">Mutual Funds</button>
+                <button class="filter-tab" onclick="setTab(this, 'us')">US ETFs / Stocks</button>
+                <button class="filter-tab" onclick="setTab(this, 'india')">Indian MF</button>
+            </div>
+            <div class="results-list" id="results-container">
+                <!-- Dynamic loop loading both Indian & US entries from your database -->
+                {% for fund in funds %}
+                <a href="{% url 'mutual_funds:fund_detail' fund.scheme_code %}" class="result-item" data-category="{{ fund.category|lower }}">
+                    <div>
+                        <div class="item-symbol">{{ fund.scheme_code }}</div>
+                        <div class="item-desc">{{ fund.scheme_name }}</div>
+                    </div>
+                    <span class="item-tag">{{ fund.category|default:"Mutual Fund" }}</span>
+                </a>
+                {% empty %}
+                <!-- Fallback static preview items if database is empty -->
+                <a href="#" class="result-item" data-category="india">
+                    <div>
+                        <div class="item-symbol">120503</div>
+                        <div class="item-desc">SBI Bluechip Fund - Direct Plan - Growth</div>
+                    </div>
+                    <span class="item-tag">Indian MF</span>
+                </a>
+                <a href="#" class="result-item" data-category="india">
+                    <div>
+                        <div class="item-symbol">120156</div>
+                        <div class="item-desc">ICICI Pru Bluechip Fund - Direct Plan</div>
+                    </div>
+                    <span class="item-tag">Indian MF</span>
+                </a>
+                <a href="#" class="result-item" data-category="us">
+                    <div>
+                        <div class="item-symbol">SPY</div>
+                        <div class="item-desc">SPDR S&P 500 ETF TRUST</div>
+                    </div>
+                    <span class="item-tag">US ETF</span>
+                </a>
+                <a href="#" class="result-item" data-category="us">
+                    <div>
+                        <div class="item-symbol">QQQ</div>
+                        <div class="item-desc">Invesco QQQ Trust, Series 1</div>
+                    </div>
+                    <span class="item-tag">US ETF</span>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const modal = document.getElementById('symbol-modal');
+
+        function openModal() {
+            modal.style.display = 'flex';
+            document.getElementById('fund-search-input').focus();
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        function outsideClick(e) {
+            if (e.target === modal) closeModal();
+        }
+
+        function filterFunds() {
+            let input = document.getElementById('fund-search-input').value.toLowerCase();
+            let items = document.getElementsByClassName('result-item');
+            for (let i = 0; i < items.length; i++) {
+                let text = items[i].innerText.toLowerCase();
+                items[i].style.display = text.includes(input) ? 'flex' : 'none';
+            }
+        }
+
+        function setTab(element, category) {
+            document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
+            let items = document.getElementsByClassName('result-item');
+            for (let i = 0; i < items.length; i++) {
+                let cat = items[i].getAttribute('data-category');
+                if (category === 'all' || (cat && cat.includes(category))) {
+                    items[i].style.display = 'flex';
+                } else {
+                    items[i].style.display = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>

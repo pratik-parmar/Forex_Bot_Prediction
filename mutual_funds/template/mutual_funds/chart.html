@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ fund.scheme_name }} - Chart</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #0f1117;
+            color: #fff;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .nav-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .nav-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .back-btn {
+            background: #242832;
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 13px;
+        }
+        
+        .back-btn:hover {
+            background: #2962ff;
+        }
+        
+        #chart {
+            width: 100%;
+            height: 450px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="nav-container">
+        <div class="nav-header">
+            <div>
+                <h2>{{ fund.scheme_name }}</h2>
+                <p style="color: #8c919c; margin: 4px 0 0 0; font-size: 13px;">Scheme Code: {{ fund.scheme_code }} | Fund House: {{ fund.fund_house }}</p>
+            </div>
+            <a href="{% url 'mutual_funds:fund_list' %}" class="back-btn">&larr; Back to Funds</a>
+        </div>
+
+        <div id="chart"></div>
+    </div>
+
+    <script>
+        // Initialize Lightweight Chart matching the terminal theme
+        const chartElement = document.getElementById('chart');
+        const chart = LightweightCharts.createChart(chartElement, {
+            width: chartElement.clientWidth,
+            height: 450,
+            layout: {
+                background: {
+                    type: 'solid',
+                    color: '#151821'
+                },
+                textColor: '#d1d4dc',
+            },
+            grid: {
+                vertLines: {
+                    color: '#292d36'
+                },
+                horzLines: {
+                    color: '#292d36'
+                },
+            },
+            timeScale: {
+                borderColor: '#292d36',
+            },
+        });
+
+        const lineSeries = chart.addLineSeries({
+            color: '#2962ff',
+            lineWidth: 2,
+        });
+
+        // Fetch historical and forecast data from your Django API
+        fetch("{% url 'mutual_funds:fund_chart_api' fund.scheme_code %}")
+            .then(response => response.json())
+            .then(data => {
+                // Combine historical and forecast data points for continuous plotting
+                const combinedData = [...data.historical, ...data.forecast];
+                lineSeries.setData(combinedData);
+                chart.timeScale().fitContent();
+            })
+            .catch(error => console.error('Error loading fund chart data:', error));
+
+        // Responsive resize
+        window.addEventListener('resize', () => {
+            chart.applyOptions({
+                width: chartElement.clientWidth
+            });
+        });
+    </script>
+</body>
+
+</html>

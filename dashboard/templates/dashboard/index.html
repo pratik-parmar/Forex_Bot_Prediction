@@ -1,0 +1,3033 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forex Trading Dashboard</title>
+
+    <link rel="preconnect" href="https://s3.tradingview.com" crossorigin>
+    <link rel="preconnect" href="https://ws.finnhub.io" crossorigin>
+
+    <script src="https://s3.tradingview.com/tv.js" defer></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            background: #0f1117;
+            color: #ffffff;
+            transition: 0.3s;
+        }
+
+        body.light {
+            background: #f4f5f7;
+            color: #111111;
+        }
+
+        .app {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            width: 220px;
+            background: #151821;
+            border-right: 1px solid #292d36;
+            padding: 20px 12px;
+            flex-shrink: 0;
+        }
+
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 25px;
+            padding-left: 8px;
+        }
+
+        .menu {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .menu button {
+            background: transparent;
+            border: none;
+            color: #aaa;
+            padding: 10px 12px;
+            text-align: left;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            width: 100%;
+        }
+
+        .menu button:hover,
+        .menu button.active {
+            background: #242832;
+            color: white;
+        }
+
+        .main {
+            flex: 1;
+            padding: 15px;
+            overflow-x: hidden;
+            overflow-y: auto;
+            max-height: 100vh;
+        }
+
+        .view-section {
+            display: none;
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .connection {
+            font-size: 12px;
+            color: #26a69a;
+        }
+
+        .region-badge {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+
+        .region-badge:hover {
+            background: #242832;
+        }
+
+        .theme-btn {
+            border: 1px solid #333842;
+            background: #151821;
+            color: white;
+            padding: 6px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .profile-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #242832;
+            border: 1px solid #333842;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .profile-btn:hover {
+            background: #2f3442;
+        }
+
+        /* Authentication Dropdown Menu */
+        .auth-dropdown {
+            display: none;
+            position: absolute;
+            top: 45px;
+            right: 0;
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 8px;
+            width: 210px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .auth-dropdown.active {
+            display: block;
+        }
+
+        .auth-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            color: #1a73e8;
+            font-size: 14px;
+            font-weight: 600;
+            text-decoration: none;
+            cursor: pointer;
+            border-bottom: 1px solid #292d36;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+            border-left: none;
+            border-right: none;
+            border-top: none;
+        }
+
+        .auth-item:hover {
+            background: #1c2029;
+        }
+
+        .auth-item.secondary {
+            color: #d1d4dc;
+            font-weight: normal;
+        }
+
+        .google-btn-container {
+            padding: 10px 12px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .symbol-search-trigger {
+            background: #1e222d;
+            border: 1px solid #2a2e39;
+            padding: 6px 10px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            color: #d1d4dc;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .symbol-search-trigger:hover {
+            border-color: #2962ff;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .card {
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 6px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 80px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card-title {
+            color: #8c919c;
+            font-size: 10px;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            transition: color 0.15s ease;
+        }
+
+        .live-price-container {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .price-status {
+            font-size: 11px;
+            color: #26a69a;
+            font-weight: normal;
+        }
+
+        .price-up { color: #26a69a !important; }
+        .price-down { color: #ef5350 !important; }
+
+        .chart-card {
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .symbol {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .timeframes {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+        }
+
+        .timeframe-btn {
+            border: 1px solid #333842;
+            background: #1b1e26;
+            color: #aaa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+
+        .timeframe-btn.active {
+            background: #ffffff;
+            color: #111111;
+        }
+
+        .bottom-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .panel {
+            background: #151821;
+            border: 1px solid #292d36;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .panel h3 {
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .indicator {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #292d36;
+            font-size: 12px;
+        }
+
+        .indicator-label {
+            color: #8c919c;
+        }
+
+        .signal-box {
+            padding: 10px;
+            border-radius: 6px;
+            background: #1c2029;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        #signal {
+            font-size: 18px;
+            font-weight: bold;
+        }
+
+        .trade-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid #292d36;
+            font-size: 12px;
+        }
+
+        .trade-row span:first-child {
+            color: #8c919c;
+        }
+
+        .trade-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .buy-btn, .sell-btn {
+            flex: 1;
+            padding: 8px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .buy-btn { background: #26a69a; }
+        .sell-btn { background: #ef5350; }
+
+        .tv-search-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tv-search-modal-overlay.active {
+            display: flex;
+        }
+
+        .tv-search-dialog {
+            background: #1e222d;
+            border: 1px solid #2a2e39;
+            width: 600px;
+            max-width: 92vw;
+            border-radius: 8px;
+            box-shadow: 0 12px 36px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            color: #d1d4dc;
+        }
+
+        .tv-search-header {
+            padding: 12px 15px;
+            border-bottom: 1px solid #2a2e39;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .tv-search-input-box {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            padding-left: 24px;
+        }
+
+        .tv-search-icon-left {
+            position: absolute;
+            left: 15px;
+            color: #787b86;
+        }
+
+        .tv-search-close {
+            background: transparent;
+            border: none;
+            color: #787b86;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .tv-results-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .tv-result-item {
+            display: grid;
+            grid-template-columns: 100px 1fr 100px 120px;
+            align-items: center;
+            padding: 10px 15px;
+            border-bottom: 1px solid #2a2e39;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .tv-res-price {
+            font-weight: bold;
+            color: #26a69a;
+            text-align: right;
+            padding-right: 12px;
+        }
+
+        .tv-result-item:hover { background: #2a2e39; }
+        .tv-res-symbol { font-weight: bold; color: #fff; }
+        .tv-res-desc { color: #787b86; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 10px; }
+        .tv-res-meta { text-align: right; color: #9db2ce; display: flex; align-items: center; justify-content: flex-end; gap: 6px; }
+        .tv-badge { background: #232733; padding: 2px 4px; border-radius: 3px; font-size: 9px; color: #868993; text-transform: uppercase; }
+
+        body.light .sidebar, body.light .card, body.light .chart-card, body.light .panel, body.light .auth-dropdown { background: white; border-color: #ddd; }
+        body.light .theme-btn, body.light .profile-btn { background: white; color: #111; border-color: #ddd; }
+        body.light .symbol-search-trigger { background: #f0f3fa; border-color: #d1d4dc; color: #111; }
+        body.light .card-value { color: #111; }
+        body.light .auth-item.secondary { color: #333; }
+
+        @media (max-width: 900px) {
+            .stats { grid-template-columns: repeat(2, 1fr); }
+            .bottom-grid { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 600px) {
+            .app { flex-direction: column; }
+            .sidebar { width: 100%; display: flex; flex-direction: row; align-items: center; overflow-x: auto; padding: 8px; }
+            .logo { display: none; }
+            .menu { flex-direction: row; width: 100%; }
+            .menu button { padding: 6px 10px; font-size: 11px; white-space: nowrap; }
+            .stats { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <aside class="sidebar">
+        <div class="logo">Forex</div>
+        <div class="menu">
+            <button class="active" onclick="switchSection('dashboard', this)">Dashboard</button>
+            <button onclick="switchSection('markets', this)">Markets</button>
+            <button onclick="switchSection('signals', this)">Signals</button>
+            <button onclick="switchSection('trades', this)">Trades</button>
+            <button onclick="switchSection('settings', this)">Settings</button>
+        </div>
+    </aside>
+
+    <main class="main">
+
+        <div class="header">
+            <h1 id="page-title">Dashboard</h1>
+            <div class="header-right">
+                <span class="connection" id="market-status">Connected</span>
+                <button class="theme-btn" onclick="toggleTheme()">Theme</button>
+
+                <!-- Profile Action & Auth Dropdown -->
+                <button class="profile-btn" onclick="toggleAuthDropdown(event)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                </button>
+
+                <!-- Auth Dropdown -->
+                <div class="auth-dropdown" id="authDropdown">
+                    <button class="auth-item" onclick="handleSignIn()">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="12" cy="7" r="4"></circle>
+                        </svg>
+                        Sign in
+                    </button>
+                    <button class="auth-item secondary" onclick="handleSignUp()">
+                        Create Account
+                    </button>
+                    <div class="google-btn-container">
+                        <!-- Google Sign-In Mount Point -->
+                        <div id="g_id_onload"
+                             data-client_id="623459552834-oeoh65g0b5h7cpjp4be5rvukniumqqne.apps.googleusercontent.com"
+                             data-context="signin"
+                             data-ux_mode="popup"
+                             data-callback="handleGoogleCredentialResponse"
+                             data-auto_prompt="false">
+                        </div>
+                        <div class="g_id_signin"
+                             data-type="standard"
+                             data-shape="rectangular"
+                             data-theme="outline"
+                             data-text="signin_with"
+                             data-size="medium"
+                             data-logo_alignment="left">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div id="section-dashboard" class="view-section active">
+            
+            <div class="symbol-search-trigger" onclick="openSymbolSearchModal()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <span id="active-search-label">XAUUSD — Gold / U.S. Dollar (Spot Price)</span>
+            </div>
+
+            <div class="stats">
+                <div class="card">
+                    <div class="card-title">Balance</div>
+                    <div class="card-value" id="balance">$150.00</div>
+                </div>
+                
+                <div class="card">
+                    <div class="card-title" id="card-symbol-title">ASSET PRICE (LIVE)</div>
+                    <div class="live-price-container">
+                        <div class="card-value" id="live-price">Connecting...</div>
+                    </div>
+                    <div class="price-status" id="price-status-text">Real-time Feed Active</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">Timeframe</div>
+                    <div class="card-value" id="current-timeframe">15m</div>
+                </div>
+                <div class="card">
+                    <div class="card-title">Max Risk</div>
+                    <div class="card-value">$1.50</div>
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-header">
+                    <div>
+                        <div class="symbol" id="chart-title-symbol">XAUUSD</div>
+                        <small id="chart-sub-desc" style="font-size: 11px; color: #8c919c;">Gold / US Dollar</small>
+                    </div>
+
+                    <div class="timeframes">
+                        <button class="timeframe-btn" onclick="changeTimeframe('1', '1m', this)">1m</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('5', '5m', this)">5m</button>
+                        <button class="timeframe-btn active" onclick="changeTimeframe('15', '15m', this)">15m</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('30', '30m', this)">30m</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('60', '1H', this)">1H</button>
+                        <button class="timeframe-btn" onclick="changeTimeframe('D', '1D', this)">1D</button>
+                    </div>
+                </div>
+
+                <div class="tradingview-widget-container" style="height: 420px; width: 100%;">
+                    <div id="tradingview_chart" style="height: 100%; width: 100%;"></div>
+                </div>
+            </div>
+
+            <div class="bottom-grid">
+                <div class="panel">
+                    <h3>Technical Indicators</h3>
+                    <div class="indicator"><span class="indicator-label">EMA 20</span><span id="ema20">--</span></div>
+                    <div class="indicator"><span class="indicator-label">EMA 50</span><span id="ema50">--</span></div>
+                    <div class="indicator"><span class="indicator-label">RSI 14</span><span id="rsi">--</span></div>
+                    <div class="indicator"><span class="indicator-label">ATR 14</span><span id="atr">--</span></div>
+                    <div class="indicator"><span class="indicator-label">MACD</span><span id="macd">--</span></div>
+                    <div class="indicator"><span class="indicator-label">MACD Signal</span><span id="macd-signal">--</span></div>
+                    <div class="indicator"><span class="indicator-label">MACD Histogram</span><span id="macd-histogram">--</span></div>
+                </div>
+
+                <div class="panel">
+                    <h3>Trading Signal</h3>
+                    <div class="signal-box">
+                        <div id="signal">HOLD</div>
+
+                        <div id="signal-reason"
+                            style="margin-top: 6px; font-size: 11px; color: #8c919c;">
+                            Loading signal analysis...
+                        </div>
+
+                        <div id="signal-conditions"
+                            style="margin-top: 10px; font-size: 11px; line-height: 1.8; text-align: left;">
+                        </div>
+                    </div>
+                    <div class="trade-row"><span>Entry</span><span id="entry">--</span></div>
+                    <div class="trade-row"><span>Stop Loss</span><span id="stop-loss">--</span></div>
+                    <div class="trade-row"><span>Take Profit</span><span id="take-profit">--</span></div>
+                    <div class="trade-buttons">
+                        <button class="buy-btn" onclick="alert('BUY executed')">BUY</button>
+                        <button class="sell-btn" onclick="alert('SELL executed')">SELL</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="section-markets" class="view-section">
+            <div class="panel">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                    <div>
+                        <h3 style="margin:0;">Markets Overview</h3>
+                        <div style="margin-top:5px; font-size:11px; color:#8c919c;">
+                            Monitor supported markets and latest available prices
+                        </div>
+                    </div>
+                    <button onclick="loadMarketsOverview()" style="padding:7px 12px; border:1px solid #3a3f4b; background:transparent; color:inherit; border-radius:5px; cursor:pointer; font-size:11px;">
+                        Refresh
+                    </button>
+                </div>
+
+                <div style="width:100%; overflow-x:auto;">
+                    <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid #2a2f3a; text-align:left;">
+                                <th style="padding:12px 8px; color:#8c919c;">Symbol</th>
+                                <th style="padding:12px 8px; color:#8c919c;">Market</th>
+                                <th style="padding:12px 8px; color:#8c919c;">Price</th>
+                                <th style="padding:12px 8px; color:#8c919c;">Status</th>
+                                <th style="padding:12px 8px; color:#8c919c;">Source</th>
+                                <th style="padding:12px 8px; color:#8c919c;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="markets-table-body">
+                            <tr>
+                                <td colspan="6" style="padding:30px; text-align:center; color:#8c919c;">
+                                    Loading markets...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div id="section-signals" class="view-section"><div class="panel"><h3>Active Signals</h3></div></div>
+        <div id="section-trades" class="view-section"><div class="panel"><h3>Order History</h3></div></div>
+        <div id="section-settings" class="view-section"><div class="panel"><h3>Terminal Settings</h3></div></div>
+
+    </main>
+
+</div>
+
+<div class="tv-search-modal-overlay" id="tvSearchModal" onclick="handleModalBackdropClick(event)">
+    <div class="tv-search-dialog">
+        <div class="tv-search-header">
+            <svg class="tv-search-icon-left" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" class="tv-search-input-box" id="tvSearchInput" placeholder="Search Symbol..." oninput="filterAssets(this.value)">
+            <button class="tv-search-close" onclick="closeSymbolSearchModal()">&times;</button>
+        </div>
+        <div class="tv-results-list" id="tvResultsList"></div>
+    </div>
+</div>
+
+
+<script>
+
+/* =========================================================
+   GLOBAL VARIABLES
+========================================================= */
+
+let currentSymbol = "XAUUSD";
+
+let currentTvSymbol = "OANDA:XAUUSD";
+
+let currentTimeframe = "15";
+
+let marketSocket = null;
+
+let lastPrice = null;
+
+let reconnectTimer = null;
+
+
+/* =========================================================
+   ASSET DATABASE
+========================================================= */
+
+const globalAssetDatabase = [
+
+    {
+        symbol: "XAUUSD",
+        desc: "Gold / U.S. Dollar",
+        tvSymbol: "OANDA:XAUUSD",
+        finnhubSymbol: "OANDA:XAU_USD",
+        exchange: "OANDA",
+        badge: "spot"
+    },
+
+    {
+        symbol: "EURUSD",
+        desc: "Euro / U.S. Dollar",
+        tvSymbol: "OANDA:EURUSD",
+        finnhubSymbol: "OANDA:EUR_USD",
+        exchange: "OANDA",
+        badge: "forex"
+    },
+
+    {
+        symbol: "GBPUSD",
+        desc: "British Pound / U.S. Dollar",
+        tvSymbol: "OANDA:GBPUSD",
+        finnhubSymbol: "OANDA:GBP_USD",
+        exchange: "OANDA",
+        badge: "forex"
+    },
+
+    {
+        symbol: "BTCUSD",
+        desc: "Bitcoin / U.S. Dollar",
+        tvSymbol: "BINANCE:BTCUSDT",
+        finnhubSymbol: "BINANCE:BTCUSDT",
+        exchange: "BINANCE",
+        badge: "crypto"
+    }
+
+];
+
+
+/* =========================================================
+   LIVE PRICE CACHE
+========================================================= */
+
+const latestMarketPrices = {};
+
+const marketPriceStatus = {};
+
+
+/* =========================================================
+   CONNECTION STATUS
+========================================================= */
+
+function updateConnectionStatus(text) {
+
+    const marketStatus =
+        document.getElementById("market-status");
+
+    const priceStatus =
+        document.getElementById("price-status-text");
+
+    if (marketStatus) {
+        marketStatus.innerText = text;
+    }
+
+    if (priceStatus) {
+
+        priceStatus.innerText = text;
+
+        if (text === "Real-time Feed Active") {
+
+            priceStatus.style.color = "#26a69a";
+
+        } else if (
+            text === "Connection Error" ||
+            text === "API Error"
+        ) {
+
+            priceStatus.style.color = "#ef5350";
+
+        } else {
+
+            priceStatus.style.color = "#f5a623";
+        }
+    }
+}
+
+
+/* =========================================================
+   CONNECT DJANGO WEBSOCKET
+========================================================= */
+
+function connectMarketWebSocket() {
+
+    const protocol =
+        window.location.protocol === "https:"
+            ? "wss:"
+            : "ws:";
+
+    const socketUrl =
+        `${protocol}//${window.location.host}` +
+        `/ws/dashboard/realtime/`;
+
+    //console.log("[WS] Connecting:", socketUrl);
+
+    updateConnectionStatus("Connecting...");
+
+    if (
+        marketSocket &&
+        (
+            marketSocket.readyState === WebSocket.OPEN ||
+            marketSocket.readyState === WebSocket.CONNECTING
+        )
+    ) {
+        return;
+    }
+
+    marketSocket = new WebSocket(socketUrl);
+
+
+    /* ------------------------------
+       OPEN
+    ------------------------------ */
+
+    marketSocket.onopen = function () {
+
+        //console.log("✅ [WS] Django connected");
+
+        updateConnectionStatus("Django Connected");
+
+        subscribeCurrentSymbol();
+
+    };
+
+
+    /* ------------------------------
+       MESSAGE
+    ------------------------------ */
+
+    marketSocket.onmessage = function(event) {
+
+        try {
+
+            const message =
+                JSON.parse(event.data);
+
+            //console.log("📡 [WS] Message:", message);
+
+
+            /*
+             * MARKET TICK
+             */
+
+            if (message.type === "market_tick") {
+
+                // Store ticks for every subscribed symbol.
+                // The selected symbol is updated on the main card,
+                // while the search modal keeps prices for all markets.
+                handleLiveMarketData(message);
+
+                updateConnectionStatus(
+                    "Real-time Feed Active"
+                );
+
+                return;
+            }
+
+
+            /*
+             * FEED STATUS
+             */
+
+            if (message.type === "feed_status") {
+
+                const statusData =
+                    message.data || message;
+
+                console.log(
+                    "[FEED STATUS]",
+                    statusData
+                );
+
+                if (
+                    statusData.status === "subscribed"
+                ) {
+
+                    updateConnectionStatus(
+                        "Real-time Feed Active"
+                    );
+
+                } else if (
+                    statusData.status === "error"
+                ) {
+
+                    updateConnectionStatus(
+                        "Connection Error"
+                    );
+                }
+
+                return;
+            }
+
+
+            /*
+             * GENERIC STATUS
+             */
+
+            if (message.type === "status") {
+
+                console.log(
+                    "[DJANGO]",
+                    message.message
+                );
+
+                return;
+            }
+
+        } catch (error) {
+
+            console.error(
+                "[WS] Parse error:",
+                error
+            );
+        }
+    };
+
+
+    /* ------------------------------
+       ERROR
+    ------------------------------ */
+
+    marketSocket.onerror = function(error) {
+
+        console.error(
+            "❌ [WS] Error:",
+            error
+        );
+
+        updateConnectionStatus(
+            "Connection Error"
+        );
+    };
+
+
+    /* ------------------------------
+       CLOSE
+    ------------------------------ */
+
+    marketSocket.onclose = function(event) {
+
+        console.warn(
+            "⚠️ [WS] Closed:",
+            event.code,
+            event.reason
+        );
+
+        marketSocket = null;
+
+        updateConnectionStatus(
+            "Reconnecting..."
+        );
+
+        if (reconnectTimer) {
+
+            clearTimeout(reconnectTimer);
+        }
+
+        reconnectTimer =
+            setTimeout(
+                connectMarketWebSocket,
+                3000
+            );
+    };
+}
+
+
+/* =========================================================
+   SUBSCRIBE CURRENT SYMBOL
+========================================================= */
+
+function subscribeCurrentSymbol() {
+
+    if (
+        !marketSocket ||
+        marketSocket.readyState !== WebSocket.OPEN
+    ) {
+        return;
+    }
+
+    console.log(
+        "[WS] Requesting symbol:",
+        currentSymbol
+    );
+
+    marketSocket.send(
+        JSON.stringify({
+            action: "change_symbol",
+            symbol: currentSymbol
+        })
+    );
+}
+
+
+/* =========================================================
+   HANDLE LIVE MARKET DATA
+========================================================= */
+
+function handleLiveMarketData(data) {
+
+    if (!data) {
+        return;
+    }
+
+    //console.log("📊 [LIVE DATA]",data);
+
+
+    /*
+     * PRICE
+     */
+
+    if (
+        data.price !== undefined &&
+        data.price !== null
+    ) {
+
+        const price =
+            Number(data.price);
+
+        if (!Number.isNaN(price)) {
+
+            const symbol =
+                data.symbol
+                    ? data.symbol.toUpperCase()
+                    : currentSymbol.toUpperCase();
+
+            latestMarketPrices[symbol] = price;
+
+            marketPriceStatus[symbol] = {
+                source: "live",
+                marketOpen: true,
+                marketState: "REGULAR"
+            };
+
+
+            if (
+                symbol ===
+                currentSymbol.toUpperCase()
+            ) {
+
+                updateLivePriceDisplay(price);
+            }
+        }
+    }
+
+
+    /*
+     * INDICATORS
+     */
+
+    if (data.ema_20 !== undefined) {
+        setText(
+            "ema20",
+            formatIndicator(data.ema_20)
+        );
+    }
+
+    if (data.ema_50 !== undefined) {
+        setText(
+            "ema50",
+            formatIndicator(data.ema_50)
+        );
+    }
+
+    if (data.rsi_14 !== undefined) {
+        setText(
+            "rsi",
+            formatIndicator(data.rsi_14)
+        );
+    }
+
+    if (data.atr_14 !== undefined) {
+        setText(
+            "atr",
+            formatIndicator(data.atr_14)
+        );
+    }
+
+    if (data.macd !== undefined) {
+        setText(
+            "macd",
+            formatIndicator(data.macd)
+        );
+    }
+
+    if (data.macd_signal !== undefined) {
+        setText(
+            "macd-signal",
+            formatIndicator(data.macd_signal)
+        );
+    }
+
+    if (data.macd_histogram !== undefined) {
+        setText(
+            "macd-histogram",
+            formatIndicator(data.macd_histogram)
+        );
+    }
+
+
+    /*
+     * SIGNAL
+     */
+
+    if (data.signal !== undefined) {
+
+        const signal =
+            document.getElementById("signal");
+
+        if (signal) {
+
+            signal.innerText =
+                data.signal;
+
+            if (data.signal === "BUY") {
+
+                signal.style.color =
+                    "#26a69a";
+
+            } else if (
+                data.signal === "SELL"
+            ) {
+
+                signal.style.color =
+                    "#ef5350";
+
+            } else {
+
+                signal.style.color =
+                    "#ffffff";
+            }
+        }
+    }
+
+
+    /*
+     * SIGNAL REASON
+     *
+     * WebSocket market ticks normally contain price data only.
+     * Do not overwrite the REST technical-analysis reason
+     * with a generic message when reason is not present.
+     */
+
+    if (data.reason !== undefined) {
+        setText(
+            "signal-reason",
+            data.reason ||
+            "No complete trading setup is currently confirmed."
+        );
+    }
+
+
+    /*
+     * SIGNAL CONDITIONS
+     *
+     * Only update conditions when the message actually
+     * contains technical-analysis conditions.
+     */
+
+    if (data.conditions !== undefined) {
+        renderSignalConditions(
+            data.conditions || []
+        );
+    }
+
+
+    /*
+     * Entry / SL / TP
+     *
+     * These may come from the technical-analysis API.
+     */
+
+    if (data.entry !== undefined) {
+
+        setText(
+            "entry",
+            formatPrice(data.entry)
+        );
+    }
+
+    if (data.stop_loss !== undefined) {
+
+        setText(
+            "stop-loss",
+            formatPrice(data.stop_loss)
+        );
+    }
+
+    if (data.take_profit !== undefined) {
+
+        setText(
+            "take-profit",
+            formatPrice(data.take_profit)
+        );
+    }
+}
+
+
+/* =========================================================
+   LOAD TECHNICAL ANALYSIS
+========================================================= */
+
+async function loadTechnicalAnalysis() {
+
+    console.log(
+        "[API] Loading technical analysis:",
+        currentSymbol,
+        currentTimeframe
+    );
+
+    /*
+     * Show loading state.
+     */
+
+    setText("ema20", "Loading...");
+    setText("ema50", "Loading...");
+    setText("rsi", "Loading...");
+    setText("atr", "Loading...");
+    setText("macd", "Loading...");
+    setText("macd-signal", "Loading...");
+    setText("macd-histogram", "Loading...");
+
+    setText(
+        "signal",
+        "HOLD"
+    );
+
+    setText(
+        "signal-reason",
+        "Loading market analysis..."
+    );
+    renderSignalConditions([]);
+
+    setText("entry", "--");
+    setText("stop-loss", "--");
+    setText("take-profit", "--");
+
+
+    try {
+
+        const url =
+            `/api/technical-analysis/` +
+            `?symbol=${encodeURIComponent(currentSymbol)}` +
+            `&timeframe=${encodeURIComponent(currentTimeframe)}`;
+
+        console.log(
+            "[API] Request:",
+            url
+        );
+
+        const response =
+            await fetch(url, {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                },
+                cache: "no-store"
+            });
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+        console.log(
+            "📈 [TECHNICAL ANALYSIS]",
+            data
+        );
+
+
+        /*
+         * Handle backend error response.
+         */
+
+        if (data.error) {
+
+            throw new Error(
+                data.error
+            );
+        }
+
+
+        /*
+         * Update indicators.
+         */
+
+        setText(
+            "ema20",
+            formatIndicator(
+                data.ema_20
+            )
+        );
+
+        setText(
+            "ema50",
+            formatIndicator(
+                data.ema_50
+            )
+        );
+
+        setText(
+            "rsi",
+            formatIndicator(
+                data.rsi_14
+            )
+        );
+
+        setText(
+            "atr",
+            formatIndicator(
+                data.atr_14
+            )
+        );
+
+        setText(
+            "macd",
+            formatIndicator(
+                data.macd
+            )
+        );
+
+        setText(
+            "macd-signal",
+            formatIndicator(
+                data.macd_signal
+            )
+        );
+
+        setText(
+            "macd-histogram",
+            formatIndicator(
+                data.macd_histogram
+            )
+        );
+
+
+        /*
+         * Signal
+         */
+
+        const signalValue =
+            data.signal || "HOLD";
+
+        const signalElement =
+            document.getElementById("signal");
+
+        if (signalElement) {
+
+            signalElement.innerText =
+                signalValue;
+
+            if (
+                signalValue === "BUY"
+            ) {
+
+                signalElement.style.color =
+                    "#26a69a";
+
+            } else if (
+                signalValue === "SELL"
+            ) {
+
+                signalElement.style.color =
+                    "#ef5350";
+
+            } else {
+
+                signalElement.style.color =
+                    "#ffffff";
+            }
+        }
+
+
+        /*
+         * Signal reason
+         */
+
+        setText(
+            "signal-reason",
+            data.reason ||
+            "No trading signal."
+        );
+        renderSignalConditions(
+            data.conditions || []
+        );
+
+
+        /*
+         * Entry
+         */
+
+        setText(
+            "entry",
+            formatPrice(data.entry)
+        );
+
+
+        /*
+         * Stop Loss
+         */
+
+        setText(
+            "stop-loss",
+            formatPrice(data.stop_loss)
+        );
+
+
+        /*
+         * Take Profit
+         */
+
+        setText(
+            "take-profit",
+            formatPrice(data.take_profit)
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "❌ [TECHNICAL API ERROR]",
+            error
+        );
+
+        setText("ema20", "--");
+        setText("ema50", "--");
+        setText("rsi", "--");
+        setText("atr", "--");
+        setText("macd", "--");
+        setText("macd-signal", "--");
+        setText("macd-histogram", "--");
+
+        setText(
+            "signal",
+            "HOLD"
+        );
+
+        setText(
+            "signal-reason",
+            `Unable to load analysis: ${error.message}`
+        );
+
+        renderSignalConditions([]);
+
+        setText("entry", "--");
+        setText("stop-loss", "--");
+        setText("take-profit", "--");
+    }
+}
+
+
+/* =========================================================
+   LOAD LIVE PRICE
+========================================================= */
+
+async function loadLivePrice() {
+
+    const symbol =
+        currentSymbol.toUpperCase();
+
+    const cachedPrice =
+        latestMarketPrices[symbol];
+
+    // WebSocket is the preferred source.
+    if (
+        cachedPrice !== undefined &&
+        cachedPrice !== null
+    ) {
+
+        updateLivePriceDisplay(
+            cachedPrice
+        );
+
+        return;
+    }
+
+    // No WebSocket tick yet. This is normal when a market is closed.
+    // Ask Django/Yahoo for the latest available price instead.
+    try {
+
+        const response =
+            await fetch(
+                `/api/live-price/?symbol=${encodeURIComponent(symbol)}`
+            );
+
+        if (!response.ok) {
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
+
+        const data =
+            await response.json();
+
+        if (
+            data.success &&
+            data.price !== undefined &&
+            data.price !== null
+        ) {
+
+            const price =
+                Number(data.price);
+
+            latestMarketPrices[symbol] = price;
+
+            marketPriceStatus[symbol] = {
+                source: data.price_source || "last_close",
+                marketOpen: Boolean(data.market_open),
+                marketState: data.market_state || "CLOSED",
+                previousClose: data.previous_close,
+                lastClose: data.last_close
+            };
+
+            updateLivePriceDisplay(
+                price
+            );
+
+            renderAssetList(
+                globalAssetDatabase
+            );
+
+            return;
+        }
+
+    } catch (error) {
+
+        console.warn(
+            "[LIVE PRICE] REST fallback failed:",
+            error
+        );
+    }
+
+    const element =
+        document.getElementById(
+            "live-price"
+        );
+
+    if (element) {
+        element.innerText = "Unavailable";
+    }
+}
+
+
+/* =========================================================
+   UPDATE LIVE PRICE DISPLAY
+========================================================= */
+
+function updateLivePriceDisplay(price) {
+
+    const element =
+        document.getElementById("live-price");
+
+    if (!element) {
+        return;
+    }
+
+    if (
+        Number.isNaN(price)
+    ) {
+        return;
+    }
+
+
+    /*
+     * Different symbols have different
+     * sensible decimal precision.
+     */
+
+    let decimals = 2;
+
+    if (
+        currentSymbol === "EURUSD" ||
+        currentSymbol === "GBPUSD"
+    ) {
+
+        decimals = 5;
+
+    } else if (
+        currentSymbol === "BTCUSD"
+    ) {
+
+        decimals = 2;
+    }
+
+
+    element.innerText =
+        price.toLocaleString(
+            "en-US",
+            {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            }
+        );
+
+
+    /*
+     * Show whether the displayed price is live or
+     * the last available closing price.
+     */
+
+    const cardTitle =
+        document.getElementById(
+            "card-symbol-title"
+        );
+
+    if (cardTitle) {
+
+        const status =
+            marketPriceStatus[
+                currentSymbol.toUpperCase()
+            ];
+
+        if (
+            status &&
+            status.source === "live"
+        ) {
+
+            cardTitle.innerText =
+                `${currentSymbol} PRICE (LIVE)`;
+
+        } else if (
+            status &&
+            status.source === "last_close"
+        ) {
+
+            cardTitle.innerText =
+                `${currentSymbol} PRICE (LAST CLOSE)`;
+
+        } else {
+
+            cardTitle.innerText =
+                `${currentSymbol} PRICE`;
+        }
+    }
+
+
+    /*
+     * Price movement indication.
+     */
+
+    const priceStatusElement =
+        document.getElementById(
+            "price-status-text"
+        );
+
+    if (priceStatusElement) {
+
+        const status =
+            marketPriceStatus[
+                currentSymbol.toUpperCase()
+            ];
+
+        if (
+            status &&
+            status.source === "last_close"
+        ) {
+
+            priceStatusElement.innerText =
+                "Market Closed • Last Close";
+
+            priceStatusElement.style.color =
+                "#f5a623";
+
+        } else if (
+            status &&
+            status.source === "live"
+        ) {
+
+            priceStatusElement.innerText =
+                "Real-time Feed Active";
+
+            priceStatusElement.style.color =
+                "#26a69a";
+        }
+    }
+
+
+    if (lastPrice !== null) {
+
+        if (price > lastPrice) {
+
+            element.className =
+                "card-value price-up";
+
+        } else if (price < lastPrice) {
+
+            element.className =
+                "card-value price-down";
+
+        } else {
+
+            element.className =
+                "card-value";
+        }
+    }
+
+
+    lastPrice = price;
+}
+
+
+/* =========================================================
+   SAFE HTML UPDATE
+========================================================= */
+
+function setText(elementId, value) {
+
+    const element =
+        document.getElementById(
+            elementId
+        );
+
+    if (!element) {
+        return;
+    }
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+
+        element.innerText = "--";
+
+        return;
+    }
+
+    element.innerText =
+        value;
+}
+
+
+/* =========================================================
+   FORMAT INDICATOR
+========================================================= */
+
+function formatIndicator(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === "-" ||
+        value === ""
+    ) {
+
+        return "--";
+    }
+
+    const number =
+        Number(value);
+
+    if (Number.isNaN(number)) {
+
+        return value;
+    }
+
+    return number.toFixed(2);
+}
+
+
+/* =========================================================
+   FORMAT PRICE
+========================================================= */
+
+function formatPrice(value) {
+
+    if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        value === "-"
+    ) {
+
+        return "--";
+    }
+
+    const number =
+        Number(value);
+
+    if (Number.isNaN(number)) {
+
+        return "--";
+    }
+
+
+    /*
+     * Forex requires more decimal places.
+     */
+
+    if (
+        currentSymbol === "EURUSD" ||
+        currentSymbol === "GBPUSD"
+    ) {
+
+        return number.toFixed(5);
+    }
+
+
+    return number.toFixed(2);
+}
+
+
+/* =========================================================
+   SELECT ASSET
+========================================================= */
+
+function selectAsset(symbol) {
+
+    const asset =
+        globalAssetDatabase.find(
+            item =>
+                item.symbol === symbol
+        );
+
+    if (!asset) {
+
+        console.error(
+            "[ASSET] Unknown symbol:",
+            symbol
+        );
+
+        return;
+    }
+
+    selectAssetSymbol(
+        asset.symbol,
+        asset.desc,
+        asset.tvSymbol
+    );
+}
+
+
+/* =========================================================
+   SELECT ASSET SYMBOL
+========================================================= */
+
+function selectAssetSymbol(
+    symbol,
+    desc,
+    tvSymbol
+) {
+
+    console.log(
+        "🔄 Selected symbol:",
+        symbol
+    );
+
+
+    /*
+     * Update global state.
+     */
+
+    currentSymbol =
+        symbol.toUpperCase();
+
+    currentTvSymbol =
+        tvSymbol;
+
+
+    /*
+     * Reset previous price.
+     */
+
+    lastPrice = null;
+
+
+    /*
+     * Update UI labels.
+     */
+
+    const searchLabel =
+        document.getElementById(
+            "active-search-label"
+        );
+
+    if (searchLabel) {
+
+        searchLabel.innerText =
+            `${symbol} — ${desc}`;
+    }
+
+
+    const chartTitle =
+        document.getElementById(
+            "chart-title-symbol"
+        );
+
+    if (chartTitle) {
+
+        chartTitle.innerText =
+            symbol;
+    }
+
+
+    const chartDescription =
+        document.getElementById(
+            "chart-sub-desc"
+        );
+
+    if (chartDescription) {
+
+        chartDescription.innerText =
+            desc;
+    }
+
+
+    const cardTitle =
+        document.getElementById(
+            "card-symbol-title"
+        );
+
+    if (cardTitle) {
+
+        cardTitle.innerText =
+            `${symbol} PRICE`;
+    }
+
+
+    /*
+     * Reset dashboard values while loading.
+     */
+
+    setText("live-price", "Loading...");
+
+    setText("ema20", "--");
+    setText("ema50", "--");
+    setText("rsi", "--");
+    setText("atr", "--");
+    setText("macd", "--");
+    setText("macd-signal", "--");
+    setText("macd-histogram", "--");
+
+    setText("signal", "HOLD");
+
+    setText(
+        "signal-reason",
+        "Loading market analysis..."
+    );
+
+    renderSignalConditions([]);
+
+    setText("entry", "--");
+    setText("stop-loss", "--");
+    setText("take-profit", "--");
+
+
+    /*
+     * Reload TradingView.
+     */
+
+    initTradingViewWidget();
+
+
+    /*
+     * Tell Django WebSocket about
+     * the newly selected symbol.
+     */
+
+    if (
+        marketSocket &&
+        marketSocket.readyState ===
+        WebSocket.OPEN
+    ) {
+
+        console.log(
+            "[WS] Switching symbol:",
+            currentSymbol
+        );
+
+        marketSocket.send(
+            JSON.stringify({
+                action: "change_symbol",
+                symbol: currentSymbol
+            })
+        );
+
+    } else {
+
+        console.log(
+            "[WS] Socket not ready"
+        );
+    }
+
+
+    /*
+     * Load candle-based technical analysis.
+     */
+
+    loadTechnicalAnalysis();
+
+
+    /*
+     * Load live price.
+     */
+
+    loadLivePrice();
+
+
+    /*
+     * Close search modal.
+     */
+
+    closeSymbolSearchModal();
+}
+
+
+/* =========================================================
+   LOAD FALLBACK PRICES FOR ALL SYMBOLS
+========================================================= */
+
+async function loadAllMarketFallbackPrices() {
+
+    const symbols = [
+        "XAUUSD",
+        "EURUSD",
+        "GBPUSD",
+        "BTCUSD"
+    ];
+
+    for (const symbol of symbols) {
+
+        // A current WebSocket tick is better than REST fallback.
+        if (
+            latestMarketPrices[symbol] !== undefined &&
+            latestMarketPrices[symbol] !== null &&
+            marketPriceStatus[symbol] &&
+            marketPriceStatus[symbol].source === "live"
+        ) {
+            continue;
+        }
+
+        try {
+
+            const response =
+                await fetch(
+                    `/api/live-price/?symbol=${symbol}`
+                );
+
+            if (!response.ok) {
+                continue;
+            }
+
+            const data =
+                await response.json();
+
+            if (
+                data.success &&
+                data.price !== undefined &&
+                data.price !== null
+            ) {
+
+                latestMarketPrices[symbol] =
+                    Number(data.price);
+
+                marketPriceStatus[symbol] = {
+                    source: data.price_source || "last_close",
+                    marketOpen: Boolean(data.market_open),
+                    marketState: data.market_state || "CLOSED",
+                    previousClose: data.previous_close,
+                    lastClose: data.last_close
+                };
+            }
+
+        } catch (error) {
+
+            console.warn(
+                `[MARKET] ${symbol} fallback failed:`,
+                error
+            );
+        }
+    }
+
+    renderAssetList(
+        globalAssetDatabase
+    );
+}
+
+
+/* =========================================================
+   SEARCH MODAL
+========================================================= */
+
+function openSymbolSearchModal() {
+
+    const modal =
+        document.getElementById(
+            "tvSearchModal"
+        );
+
+    if (modal) {
+
+        modal.classList.add(
+            "active"
+        );
+    }
+
+    renderAssetList(
+        globalAssetDatabase
+    );
+
+    // Fill symbols that do not currently have a WebSocket tick
+    // (for example closed FX/gold markets on Saturday).
+    loadAllMarketFallbackPrices();
+}
+
+
+function closeSymbolSearchModal() {
+
+    const modal =
+        document.getElementById(
+            "tvSearchModal"
+        );
+
+    if (modal) {
+
+        modal.classList.remove(
+            "active"
+        );
+    }
+}
+
+
+function handleModalBackdropClick(
+    event
+) {
+
+    if (
+        event.target.id ===
+        "tvSearchModal"
+    ) {
+
+        closeSymbolSearchModal();
+    }
+}
+
+
+/* =========================================================
+   FILTER ASSETS
+========================================================= */
+
+function filterAssets(query) {
+
+    const q =
+        query
+            .toLowerCase()
+            .trim();
+
+    const filtered =
+        globalAssetDatabase.filter(
+            asset =>
+                asset.symbol
+                    .toLowerCase()
+                    .includes(q)
+                ||
+                asset.desc
+                    .toLowerCase()
+                    .includes(q)
+        );
+
+    renderAssetList(
+        filtered
+    );
+}
+
+
+/* =========================================================
+   RENDER ASSET LIST
+========================================================= */
+
+function renderAssetList(list) {
+
+    const container =
+        document.getElementById(
+            "tvResultsList"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+
+
+    list.forEach(
+        function(asset) {
+
+            const price =
+                latestMarketPrices[
+                    asset.symbol
+                ];
+
+
+            let decimals = 2;
+
+            if (
+                asset.symbol === "EURUSD" ||
+                asset.symbol === "GBPUSD"
+            ) {
+
+                decimals = 5;
+            }
+
+
+            const status =
+                marketPriceStatus[asset.symbol];
+
+            const hasPrice =
+                price !== undefined &&
+                price !== null &&
+                !Number.isNaN(Number(price));
+
+            const priceText =
+                hasPrice
+                    ? Number(price).toFixed(decimals)
+                    : "Syncing...";
+
+            const priceLabel =
+                hasPrice &&
+                status &&
+                status.source === "live"
+                    ? "LIVE"
+                    : hasPrice
+                        ? "LAST CLOSE"
+                        : "";
+
+
+            const row =
+                document.createElement(
+                    "div"
+                );
+
+            row.className =
+                "tv-result-item";
+
+
+            row.onclick =
+                function() {
+
+                    selectAsset(
+                        asset.symbol
+                    );
+                };
+
+
+            row.innerHTML = `
+
+                <span class="tv-res-symbol">
+                    ${asset.symbol}
+                </span>
+
+                <span class="tv-res-desc">
+                    ${asset.desc}
+                </span>
+
+                <span class="tv-res-price">
+                    ${priceText}
+                    ${priceLabel ? `<small style="display:block;font-size:9px;opacity:.65;margin-top:2px;">${priceLabel}</small>` : ""}
+                </span>
+
+                <span class="tv-res-meta">
+
+                    <span class="tv-badge">
+                        ${asset.badge}
+                    </span>
+
+                    <span>
+                        ${asset.exchange}
+                    </span>
+
+                </span>
+
+            `;
+
+            container.appendChild(
+                row
+            );
+        }
+    );
+}
+
+
+/* =========================================================
+   TRADINGVIEW
+========================================================= */
+
+function initTradingViewWidget() {
+
+    const container =
+        document.getElementById(
+            "tradingview_chart"
+        );
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+
+    const isLight =
+        document.body.classList.contains(
+            "light"
+        );
+
+
+    if (
+        typeof TradingView !==
+        "undefined"
+    ) {
+
+        new TradingView.widget({
+
+            autosize: true,
+
+            symbol:
+                currentTvSymbol,
+
+            interval:
+                currentTimeframe,
+
+            timezone:
+                "Etc/UTC",
+
+            theme:
+                isLight
+                    ? "light"
+                    : "dark",
+
+            style:
+                "1",
+
+            locale:
+                "en",
+
+            toolbar_bg:
+                "#f1f3f6",
+
+            enable_publishing:
+                false,
+
+            hide_top_toolbar:
+                false,
+
+            save_image:
+                false,
+
+            container_id:
+                "tradingview_chart"
+        });
+
+    } else {
+
+        console.warn(
+            "[TradingView] Library not loaded yet."
+        );
+    }
+}
+
+
+/* =========================================================
+   TIMEFRAME
+========================================================= */
+
+function changeTimeframe(
+    tfValue,
+    tfLabel,
+    btnElement
+) {
+
+    console.log(
+        "[TIMEFRAME]",
+        tfValue,
+        tfLabel
+    );
+
+
+    currentTimeframe =
+        tfValue;
+
+
+    const timeframe =
+        document.getElementById(
+            "current-timeframe"
+        );
+
+    if (timeframe) {
+
+        timeframe.innerText =
+            tfLabel;
+    }
+
+
+    /*
+     * Update active button.
+     */
+
+    document
+        .querySelectorAll(
+            ".timeframe-btn"
+        )
+        .forEach(
+            btn =>
+                btn.classList.remove(
+                    "active"
+                )
+        );
+
+
+    if (btnElement) {
+
+        btnElement.classList.add(
+            "active"
+        );
+    }
+
+
+    /*
+     * Reload TradingView.
+     */
+
+    initTradingViewWidget();
+
+
+    /*
+     * IMPORTANT:
+     * Reload technical indicators
+     * for the selected timeframe.
+     */
+
+    loadTechnicalAnalysis();
+}
+
+
+/* =========================================================
+   MARKETS OVERVIEW
+========================================================= */
+
+async function loadMarketsOverview() {
+
+    const tableBody =
+        document.getElementById(
+            "markets-table-body"
+        );
+
+    if (!tableBody) {
+        return;
+    }
+
+    tableBody.innerHTML = `
+        <tr>
+            <td colspan="6" style="padding:30px; text-align:center; color:#8c919c;">
+                Loading markets...
+            </td>
+        </tr>
+    `;
+
+    try {
+
+        const response = await fetch(
+            "/api/markets/",
+            {
+                method: "GET",
+                headers: {
+                    "Accept": "application/json"
+                },
+                cache: "no-store"
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        if (!data.success || !Array.isArray(data.markets)) {
+            throw new Error(
+                data.error || "Invalid markets response"
+            );
+        }
+
+        renderMarketsOverview(data.markets);
+
+    } catch (error) {
+
+        console.error(
+            "[MARKETS] API error:",
+            error
+        );
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="6" style="padding:30px; text-align:center; color:#ef5350;">
+                    Unable to load market data.
+                </td>
+            </tr>
+        `;
+    }
+}
+
+
+function renderMarketsOverview(markets) {
+
+    const tableBody =
+        document.getElementById(
+            "markets-table-body"
+        );
+
+    if (!tableBody) {
+        return;
+    }
+
+    tableBody.innerHTML = "";
+
+    markets.forEach(function(market) {
+
+        let decimals = 2;
+
+        if (
+            market.symbol === "EURUSD" ||
+            market.symbol === "GBPUSD"
+        ) {
+            decimals = 5;
+        }
+
+        let priceText = "--";
+
+        if (
+            market.price !== null &&
+            market.price !== undefined
+        ) {
+            priceText = Number(market.price).toFixed(decimals);
+        }
+
+        const isOpen = market.market_open === true;
+
+        const statusText =
+            isOpen
+                ? "OPEN"
+                : market.market_state === "UNAVAILABLE"
+                    ? "UNAVAILABLE"
+                    : "CLOSED";
+
+        const statusColor =
+            isOpen
+                ? "#26a69a"
+                : statusText === "UNAVAILABLE"
+                    ? "#ef5350"
+                    : "#f5a623";
+
+        let sourceText = "Unavailable";
+
+        if (market.price_source === "latest_market_price") {
+            sourceText = "Live";
+        } else if (market.price_source === "last_close") {
+            sourceText = "Last Close";
+        } else if (market.price_source) {
+            sourceText = market.price_source;
+        }
+
+        const row = document.createElement("tr");
+
+        row.style.borderBottom = "1px solid #2a2f3a";
+
+        row.innerHTML = `
+            <td style="padding:14px 8px; font-weight:600;">
+                ${market.symbol}
+            </td>
+            <td style="padding:14px 8px;">
+                <div>${market.name}</div>
+                <div style="margin-top:3px; font-size:10px; color:#8c919c;">
+                    ${market.type}
+                </div>
+            </td>
+            <td style="padding:14px 8px; font-weight:600; font-variant-numeric:tabular-nums;">
+                ${priceText}
+            </td>
+            <td style="padding:14px 8px;">
+                <span style="color:${statusColor}; font-size:10px; font-weight:600;">
+                    ● ${statusText}
+                </span>
+            </td>
+            <td style="padding:14px 8px; color:#8c919c;">
+                ${sourceText}
+            </td>
+            <td style="padding:14px 8px;">
+                <button onclick="selectMarketFromOverview('${market.symbol}')" style="padding:6px 10px; border:1px solid #3a3f4b; background:transparent; color:inherit; border-radius:4px; cursor:pointer; font-size:10px;">
+                    View
+                </button>
+            </td>
+        `;
+
+        tableBody.appendChild(row);
+    });
+}
+
+
+function selectMarketFromOverview(symbol) {
+
+    symbol = symbol.toUpperCase().trim();
+
+    const asset = globalAssetDatabase.find(
+        item => item.symbol === symbol
+    );
+
+    if (!asset) {
+        return;
+    }
+
+    selectAsset(symbol);
+
+    const dashboardButton =
+        document.querySelector(
+            '.menu button'
+        );
+
+    switchSection(
+        "dashboard",
+        dashboardButton
+    );
+}
+
+
+/* =========================================================
+   THEME
+========================================================= */
+
+function toggleTheme() {
+
+    document.body.classList.toggle(
+        "light"
+    );
+
+    initTradingViewWidget();
+}
+
+
+/* =========================================================
+   NAVIGATION
+========================================================= */
+
+function switchSection(
+    sectionId,
+    btnElement
+) {
+
+    document
+        .querySelectorAll(
+            ".view-section"
+        )
+        .forEach(
+            section =>
+                section.classList.remove(
+                    "active"
+                )
+        );
+
+
+    document
+        .querySelectorAll(
+            ".menu button"
+        )
+        .forEach(
+            button =>
+                button.classList.remove(
+                    "active"
+                )
+        );
+
+
+    const target =
+        document.getElementById(
+            `section-${sectionId}`
+        );
+
+
+    if (target) {
+
+        target.classList.add(
+            "active"
+        );
+    }
+
+
+    if (btnElement) {
+
+        btnElement.classList.add(
+            "active"
+        );
+    }
+
+
+    /*
+     * Load Markets Overview whenever the section is opened.
+     */
+    if (sectionId === "markets") {
+        loadMarketsOverview();
+    }
+
+
+    const title =
+        document.getElementById(
+            "page-title"
+        );
+
+
+    if (title) {
+
+        title.innerText =
+            sectionId
+                .charAt(0)
+                .toUpperCase()
+            +
+            sectionId.slice(1);
+    }
+}
+
+
+/* =========================================================
+   AUTH
+========================================================= */
+
+function toggleAuthDropdown(event) {
+
+    event.stopPropagation();
+
+    const dropdown =
+        document.getElementById(
+            "authDropdown"
+        );
+
+    if (dropdown) {
+
+        dropdown.classList.toggle(
+            "active"
+        );
+    }
+}
+
+
+function handleSignIn() {
+
+    window.location.href =
+        "/login/";
+}
+
+
+function handleSignUp() {
+
+    window.location.href =
+        "/register/";
+}
+
+
+function handleGoogleCredentialResponse(
+    response
+) {
+
+    console.log(
+        "Google response:",
+        response
+    );
+}
+
+
+/* =========================================================
+   CLOSE AUTH DROPDOWN
+========================================================= */
+
+document.addEventListener(
+    "click",
+    function(event) {
+
+        const dropdown =
+            document.getElementById(
+                "authDropdown"
+            );
+
+        if (
+            dropdown &&
+            !dropdown.contains(
+                event.target
+            )
+        ) {
+
+            dropdown.classList.remove(
+                "active"
+            );
+        }
+    }
+);
+
+
+/* =========================================================
+   PERIODIC TECHNICAL ANALYSIS REFRESH
+========================================================= */
+
+setInterval(
+    function() {
+
+        console.log(
+            "[AUTO] Refreshing technical analysis"
+        );
+
+        loadTechnicalAnalysis();
+
+    },
+    60000
+);
+
+
+/* =========================================================
+   PERIODIC ASSET SEARCH PRICE REFRESH
+========================================================= */
+
+setInterval(
+    function() {
+
+        renderAssetList(
+            globalAssetDatabase
+        );
+
+    },
+    5000
+);
+
+
+/* =========================================================
+   PERIODIC CLOSED-MARKET FALLBACK REFRESH
+========================================================= */
+
+setInterval(
+    function() {
+
+        loadAllMarketFallbackPrices();
+
+    },
+    60000
+);
+
+
+/* =========================================================
+   PERIODIC MARKETS OVERVIEW REFRESH
+========================================================= */
+
+setInterval(
+    function() {
+
+        const marketsSection =
+            document.getElementById(
+                "section-markets"
+            );
+
+        if (
+            marketsSection &&
+            marketsSection.classList.contains("active")
+        ) {
+            loadMarketsOverview();
+        }
+
+    },
+    30000
+);
+
+
+/* =========================================================
+   START APPLICATION
+========================================================= */
+
+window.addEventListener(
+    "DOMContentLoaded",
+    function() {
+
+        console.log(
+            "🚀 Forex Dashboard starting..."
+        );
+
+
+        /*
+         * Start TradingView.
+         */
+
+        initTradingViewWidget();
+
+
+        /*
+         * Start Django WebSocket.
+         */
+
+        connectMarketWebSocket();
+
+
+        /*
+         * Load initial technical analysis.
+         */
+
+        loadTechnicalAnalysis();
+
+
+        /*
+         * Initial live price.
+         */
+
+        loadLivePrice();
+
+        /*
+         * Load last available prices for all symbols that
+         * are not currently sending WebSocket ticks.
+         */
+
+        loadAllMarketFallbackPrices();
+
+        /*
+         * Prepare Markets Overview data.
+         */
+        loadMarketsOverview();
+
+    }
+);
+function renderSignalConditions(conditions) {
+
+    const container =
+        document.getElementById(
+            "signal-conditions"
+        );
+
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+
+    if (
+        !conditions ||
+        conditions.length === 0
+    ) {
+        return;
+    }
+
+    conditions.forEach(function(condition) {
+
+        const row =
+            document.createElement("div");
+
+        row.innerText = condition;
+
+        if (condition.startsWith("✓")) {
+
+            row.style.color = "#26a69a";
+
+        } else if (
+            condition.startsWith("✗")
+        ) {
+
+            row.style.color = "#ef5350";
+
+        } else {
+
+            row.style.color = "#8c919c";
+        }
+
+        container.appendChild(row);
+    });
+}
+
+</script>
+</body>
+</html>
