@@ -1,8 +1,13 @@
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import AuthenticationForm
 from django.http import JsonResponse
-from django.shortcuts import render
+from django.shortcuts import redirect, render
 
 from dashboard.technical import calculate_technical_analysis
 from data.market_data import get_market_candles
+from dashboard.decorators import api_login_required
 
 
 SUPPORTED_SYMBOLS = {
@@ -13,6 +18,11 @@ SUPPORTED_SYMBOLS = {
 }
 
 
+# =========================================================
+# DASHBOARD
+# =========================================================
+
+@login_required
 def dashboard_index(request):
     return render(
         request,
@@ -20,6 +30,118 @@ def dashboard_index(request):
     )
 
 
+# =========================================================
+# LOGIN
+# =========================================================
+
+def login_view(request):
+
+    if request.user.is_authenticated:
+        return redirect("dashboard_index")
+
+    if request.method == "POST":
+
+        form = AuthenticationForm(
+            request,
+            data=request.POST
+        )
+
+        if form.is_valid():
+
+            user = form.get_user()
+
+            login(
+                request,
+                user
+            )
+
+            return redirect(
+                request.GET.get(
+                    "next",
+                    "dashboard_index"
+                )
+            )
+
+    else:
+
+        form = AuthenticationForm()
+
+    return render(
+        request,
+        "dashboard/login.html",
+        {
+            "form": form
+        }
+    )
+
+
+# =========================================================
+# REGISTER
+# =========================================================
+
+def register_view(request):
+
+    if request.user.is_authenticated:
+        return redirect("dashboard_index")
+
+    from dashboard.forms import RegisterForm
+
+    if request.method == "POST":
+
+        form = RegisterForm(
+            request.POST
+        )
+
+        if form.is_valid():
+
+            user = form.save()
+
+            login(
+                request,
+                user
+            )
+
+            messages.success(
+                request,
+                "Account created successfully."
+            )
+
+            return redirect(
+                "dashboard_index"
+            )
+
+    else:
+
+        form = RegisterForm()
+
+    return render(
+        request,
+        "dashboard/register.html",
+        {
+            "form": form
+        }
+    )
+
+
+# =========================================================
+# LOGOUT
+# =========================================================
+
+@login_required
+def logout_view(request):
+
+    logout(request)
+
+    return redirect(
+        "login"
+    )
+
+
+# =========================================================
+# TECHNICAL ANALYSIS API
+# =========================================================
+
+@api_login_required
 def technical_analysis(request):
 
     symbol = request.GET.get(
@@ -31,10 +153,6 @@ def technical_analysis(request):
         "timeframe",
         "15"
     )
-
-    # =====================================================
-    # VALIDATE SYMBOL
-    # =====================================================
 
     if symbol not in SUPPORTED_SYMBOLS:
 
@@ -50,18 +168,10 @@ def technical_analysis(request):
 
     try:
 
-        # =================================================
-        # GET CANDLES
-        # =================================================
-
         candles = get_market_candles(
             symbol=symbol,
             timeframe=timeframe
         )
-
-        # =================================================
-        # TECHNICAL ANALYSIS
-        # =================================================
 
         analysis = calculate_technical_analysis(
             candles,

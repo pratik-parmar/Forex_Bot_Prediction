@@ -2,9 +2,9 @@ import time
 
 import pandas as pd
 import yfinance as yf
-
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
-
+from dashboard.decorators import api_login_required
 
 # =========================================================
 # SYMBOL MAPPING
@@ -339,7 +339,7 @@ def get_market_snapshot(symbol):
 # =========================================================
 # LIVE PRICE API
 # =========================================================
-
+@api_login_required
 def live_price(request):
     symbol = request.GET.get(
         "symbol",
@@ -383,7 +383,7 @@ def live_price(request):
 # =========================================================
 # MARKETS OVERVIEW API
 # =========================================================
-
+@api_login_required
 def markets_overview(request):
     """Return latest available price/status for all supported markets."""
 
@@ -431,7 +431,7 @@ def markets_overview(request):
 # =========================================================
 # MARKET CANDLES API
 # =========================================================
-
+@api_login_required
 def market_candles(
     request
 ):
