@@ -29,6 +29,11 @@ def calculate_technical_analysis(
     macd_signal = float(latest["MACD_Signal"])
     macd_histogram = float(latest["MACD_Histogram"])
 
+    bb_upper = float(latest["BB_Upper"])
+    bb_middle = float(latest["BB_Middle"])
+    bb_lower = float(latest["BB_Lower"])
+    
+
     signal_data = generate_signal(df)
 
     signal = signal_data["signal"]
@@ -61,6 +66,10 @@ def calculate_technical_analysis(
         )
 
     return {
+        "bollinger_upper": round(bb_upper, 5),
+        "bollinger_middle": round(bb_middle, 5),
+        "bollinger_lower": round(bb_lower, 5),
+
         "price": round(price, 5),
 
         "ema_20": round(ema20, 5),
@@ -96,4 +105,5 @@ def calculate_technical_analysis(
         ),
 
         "candles": len(df),
+
     }

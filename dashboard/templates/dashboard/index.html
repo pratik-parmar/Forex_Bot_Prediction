@@ -641,6 +641,7 @@
             <div class="bottom-grid">
                 <div class="panel">
                     <h3>Technical Indicators</h3>
+
                     <div class="indicator"><span class="indicator-label">EMA 20</span><span id="ema20">--</span></div>
                     <div class="indicator"><span class="indicator-label">EMA 50</span><span id="ema50">--</span></div>
                     <div class="indicator"><span class="indicator-label">RSI 14</span><span id="rsi">--</span></div>
@@ -648,6 +649,9 @@
                     <div class="indicator"><span class="indicator-label">MACD</span><span id="macd">--</span></div>
                     <div class="indicator"><span class="indicator-label">MACD Signal</span><span id="macd-signal">--</span></div>
                     <div class="indicator"><span class="indicator-label">MACD Histogram</span><span id="macd-histogram">--</span></div>
+                    <div class="indicator"><span class="indicator-label">BB Upper</span><span id="bb-upper">--</span></div>
+                    <div class="indicator"><span class="indicator-label">BB Middle</span><span id="bb-middle">--</span></div>
+                    <div class="indicator"><span class="indicator-label">BB Lower</span><span id="bb-lower">--</span></div>
                 </div>
 
                 <div class="panel">
@@ -1287,6 +1291,10 @@ async function loadTechnicalAnalysis() {
     setText("macd-signal", "Loading...");
     setText("macd-histogram", "Loading...");
 
+    setText("bb-upper", "Loading...");
+    setText("bb-middle", "Loading...");
+    setText("bb-lower", "Loading...");  
+
     setText(
         "signal",
         "HOLD"
@@ -1405,6 +1413,28 @@ async function loadTechnicalAnalysis() {
             formatIndicator(
                 data.macd_histogram
             )
+            
+        );
+
+        setText(
+            "bb-upper",
+            formatIndicator(
+                data.bollinger_upper
+            )
+        );
+
+        setText(
+            "bb-middle",
+            formatIndicator(
+                data.bollinger_middle
+            )
+        );
+
+        setText(
+            "bb-lower",
+            formatIndicator(
+                data.bollinger_lower
+            )
         );
 
 
@@ -1503,6 +1533,9 @@ async function loadTechnicalAnalysis() {
         setText("macd", "--");
         setText("macd-signal", "--");
         setText("macd-histogram", "--");
+        setText("bb-upper", "--");
+        setText("bb-middle", "--");
+        setText("bb-lower", "--");
 
         setText(
             "signal",
@@ -2002,6 +2035,9 @@ function selectAssetSymbol(
     setText("macd", "--");
     setText("macd-signal", "--");
     setText("macd-histogram", "--");
+    setText("bb-upper", "--");
+    setText("bb-middle", "--");
+    setText("bb-lower", "--");
 
     setText("signal", "HOLD");
 

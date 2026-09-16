@@ -179,4 +179,34 @@ def calculate_indicators(data):
         df["MACD_Signal"]
     )
 
+        # =====================================================
+    # BOLLINGER BANDS (20, 2)
+    # =====================================================
+
+    bb_period = 20
+    bb_std = 2
+
+    df["BB_Middle"] = (
+        df["Close"]
+        .rolling(window=bb_period)
+        .mean()
+    )
+
+    rolling_std = (
+        df["Close"]
+        .rolling(window=bb_period)
+        .std()
+    )
+
+    df["BB_Upper"] = (
+        df["BB_Middle"] +
+        (bb_std * rolling_std)
+    )
+
+    df["BB_Lower"] = (
+        df["BB_Middle"] -
+        (bb_std * rolling_std)
+    )
+    
+
     return df
