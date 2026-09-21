@@ -28,6 +28,12 @@ urlpatterns = [
     ),
 
     path(
+        "verify-email/<str:uidb64>/",
+        views.verify_email_view,
+        name="verify_email"
+    ),
+
+    path(
         "logout/",
         views.logout_view,
         name="logout"
