@@ -31,3 +31,4 @@ channels
 websocket-client
 python-dotenv
 daphne
+requests>=2.31,<3.0
