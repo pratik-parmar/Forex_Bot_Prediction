@@ -1,3 +1,5 @@
+
+import logging
 import secrets
 from datetime import timedelta
 
@@ -9,7 +11,7 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password, check_password
 from django.core.mail import send_mail
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.utils import timezone
@@ -19,13 +21,15 @@ from django.utils.http import (
     urlsafe_base64_encode,
 )
 from django.utils.encoding import force_bytes, force_str
-from django.views.decorators.http import require_POST
 
 from dashboard.forms import RegisterForm
 from dashboard.models import EmailVerification
 from dashboard.technical import calculate_technical_analysis
 from data.market_data import get_market_candles
 from dashboard.decorators import api_login_required
+
+
+logger = logging.getLogger(__name__)
 
 
 SUPPORTED_SYMBOLS = {"XAUUSD", "EURUSD", "GBPUSD", "BTCUSD"}
@@ -36,10 +40,18 @@ OTP_MAX_ATTEMPTS = 5
 OTP_RESEND_COOLDOWN_SECONDS = 60
 
 
+# =========================================================
+# DASHBOARD
+# =========================================================
+
 @login_required
 def dashboard_index(request):
     return render(request, "dashboard/index.html")
 
+
+# =========================================================
+# LOGIN
+# =========================================================
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -47,45 +59,88 @@ def login_view(request):
 
     if request.method == "POST":
         form = AuthenticationForm(request, data=request.POST)
+
         if form.is_valid():
             user = form.get_user()
+
             # Django's ModelBackend rejects inactive users.
             if not user.is_active:
-                form.add_error(None, "Please verify your email before signing in.")
+                form.add_error(
+                    None,
+                    "Please verify your email before signing in."
+                )
             else:
                 login(request, user)
-                next_url = request.POST.get("next") or request.GET.get("next")
+
+                next_url = (
+                    request.POST.get("next")
+                    or request.GET.get("next")
+                )
+
                 if next_url and url_has_allowed_host_and_scheme(
                     next_url,
                     allowed_hosts={request.get_host()},
                     require_https=request.is_secure(),
                 ):
                     return redirect(next_url)
+
                 return redirect("dashboard_index")
+
     else:
-        form = AuthenticationForm(request)
+        form = AuthenticationForm()
 
-    return render(request, "dashboard/login.html", {"form": form})
+    return render(
+        request,
+        "dashboard/login.html",
+        {"form": form}
+    )
 
+
+# =========================================================
+# EMAIL OTP
+# =========================================================
 
 def _issue_email_otp(user, verification):
+    """
+    Generate and email an OTP.
+
+    Returns:
+        (True, success_message) when sent.
+        (False, cooldown_message) when resend is too soon.
+
+    Raises an exception if the email provider fails.
+    """
+
     now = timezone.now()
 
-    if (
-        verification.last_sent_at
-        and (now - verification.last_sent_at).total_seconds()
-        < OTP_RESEND_COOLDOWN_SECONDS
-    ):
-        return False, "Please wait a minute before requesting another code."
+    # Enforce resend cooldown.
+    if verification.last_sent_at:
+        elapsed = (
+            now - verification.last_sent_at
+        ).total_seconds()
 
+        if elapsed < OTP_RESEND_COOLDOWN_SECONDS:
+            return (
+                False,
+                "Please wait a minute before requesting another code."
+            )
+
+    # Generate a cryptographically secure 6-digit OTP.
     otp = f"{secrets.randbelow(10 ** OTP_LENGTH):0{OTP_LENGTH}d}"
+
     verification.otp_hash = make_password(otp)
-    verification.expires_at = now + timedelta(minutes=OTP_EXPIRY_MINUTES)
+    verification.expires_at = now + timedelta(
+        minutes=OTP_EXPIRY_MINUTES
+    )
     verification.attempts = 0
     verification.last_sent_at = now
+
     verification.save(
         update_fields=[
-            "otp_hash", "expires_at", "attempts", "last_sent_at"
+            "otp_hash",
+            "expires_at",
+            "attempts",
+            "last_sent_at",
         ]
     )
 
@@ -101,14 +156,29 @@ def _issue_email_otp(user, verification):
             recipient_list=[user.email],
             fail_silently=False,
         )
+
     except Exception:
-        # Invalidate the code if the email provider rejected the message.
+        # Invalidate the OTP if the email provider rejects the message.
         verification.otp_hash = ""
         verification.save(update_fields=["otp_hash"])
+
+        # Log the exception server-side; never log the OTP itself.
+        logger.exception(
+            "Failed to send verification email for user_id=%s",
+            user.pk,
+        )
+
         raise
 
-    return True, "A verification code has been sent to your email."
+    return (
+        True,
+        "A verification code has been sent to your email."
+    )
 
+
+# =========================================================
+# REGISTRATION
+# =========================================================
 
 def register_view(request):
     if request.user.is_authenticated:
@@ -116,100 +186,231 @@ def register_view(request):
 
     if request.method == "POST":
         form = RegisterForm(request.POST)
+
         if form.is_valid():
-            with transaction.atomic():
-                user = form.save(commit=False)
-                user.is_active = False
-                user.save()
-                verification = EmailVerification.objects.create(
-                    user=user,
-                    expires_at=timezone.now() + timedelta(minutes=OTP_EXPIRY_MINUTES),
-                )
+            user = None
 
             try:
-                _issue_email_otp(user, verification)
-            except Exception:
-                messages.error(
-                    request,
-                    "We couldn't send the verification email. "
-                    "Please wait a minute, then use Resend code."
-                )
-                return redirect(
-                    "verify_email",
-                    uidb64=urlsafe_base64_encode(force_bytes(user.pk))
+                # Create the inactive user and verification record.
+                with transaction.atomic():
+                    user = form.save(commit=False)
+                    user.is_active = False
+                    user.save()
+
+                    verification = EmailVerification.objects.create(
+                        user=user,
+                        expires_at=(
+                            timezone.now()
+                            + timedelta(minutes=OTP_EXPIRY_MINUTES)
+                        ),
+                    )
+
+            except IntegrityError:
+                logger.warning(
+                    "Registration failed due to a database uniqueness conflict."
                 )
 
-            messages.info(
-                request,
-                "Account created. Enter the verification code sent to your email."
-            )
+                messages.error(
+                    request,
+                    "An account with these details may already exist."
+                )
+                return render(
+                    request,
+                    "dashboard/register.html",
+                    {"form": form},
+                )
+
+            # Send OTP after the database transaction has committed.
+            try:
+                sent, message = _issue_email_otp(
+                    user,
+                    verification
+                )
+
+            except Exception:
+                # Keep the inactive account and verification record.
+                # The user can retry using the Resend code option.
+                messages.error(
+                    request,
+                    "We couldn't send the verification email right now. "
+                    "Please check your email details and try Resend code."
+                )
+
+                return redirect(
+                    "verify_email",
+                    uidb64=urlsafe_base64_encode(
+                        force_bytes(user.pk)
+                    ),
+                )
+
+            if sent:
+                messages.success(
+                    request,
+                    "Account created. Enter the verification code sent to your email."
+                )
+            else:
+                messages.warning(request, message)
+
             return redirect(
                 "verify_email",
-                uidb64=urlsafe_base64_encode(force_bytes(user.pk))
+                uidb64=urlsafe_base64_encode(
+                    force_bytes(user.pk)
+                ),
             )
+
     else:
         form = RegisterForm()
 
-    return render(request, "dashboard/register.html", {"form": form})
+    return render(
+        request,
+        "dashboard/register.html",
+        {"form": form}
+    )
 
+
+# =========================================================
+# GET USER FOR EMAIL VERIFICATION
+# =========================================================
 
 def _get_verification_user(uidb64):
     try:
-        user_id = force_str(urlsafe_base64_decode(uidb64))
+        user_id = force_str(
+            urlsafe_base64_decode(uidb64)
+        )
+
         return User.objects.get(pk=user_id)
-    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+
+    except (
+        TypeError,
+        ValueError,
+        OverflowError,
+        User.DoesNotExist,
+    ):
         return None
 
 
+# =========================================================
+# EMAIL VERIFICATION
+# =========================================================
+
 def verify_email_view(request, uidb64):
     user = _get_verification_user(uidb64)
+
     if user is None:
-        messages.error(request, "Invalid verification request.")
+        messages.error(
+            request,
+            "Invalid verification request."
+        )
         return redirect("register")
 
     if user.is_active:
-        messages.info(request, "This account is already verified. Please sign in.")
+        messages.info(
+            request,
+            "This account is already verified. Please sign in."
+        )
         return redirect("login")
 
     try:
         verification = user.email_verification
+
     except EmailVerification.DoesNotExist:
-        messages.error(request, "Verification request not found. Please register again.")
+        messages.error(
+            request,
+            "Verification request not found. Please register again."
+        )
         return redirect("register")
 
     if request.method == "POST":
+
+        # -------------------------
+        # RESEND OTP
+        # -------------------------
         if "resend" in request.POST:
             try:
-                sent, message = _issue_email_otp(user, verification)
-                (messages.success if sent else messages.warning)(request, message)
-            except Exception:
-                messages.error(request, "Unable to send the email right now. Try again later.")
-            return redirect("verify_email", uidb64=uidb64)
+                sent, message = _issue_email_otp(
+                    user,
+                    verification
+                )
 
-        code = request.POST.get("otp", "").strip()
+                if sent:
+                    messages.success(request, message)
+                else:
+                    messages.warning(request, message)
+
+            except Exception:
+                messages.error(
+                    request,
+                    "Unable to send the email right now. "
+                    "Please try again later."
+                )
+
+            return redirect(
+                "verify_email",
+                uidb64=uidb64
+            )
+
+        # -------------------------
+        # VERIFY OTP
+        # -------------------------
+        code = request.POST.get(
+            "otp",
+            ""
+        ).strip()
 
         if verification.attempts >= OTP_MAX_ATTEMPTS:
-            messages.error(request, "Too many incorrect attempts. Request a new code.")
+            messages.error(
+                request,
+                "Too many incorrect attempts. Request a new code."
+            )
+
+        elif not verification.otp_hash:
+            messages.error(
+                request,
+                "No valid verification code is available. "
+                "Please request a new one."
+            )
+
         elif timezone.now() >= verification.expires_at:
-            messages.error(request, "This code has expired. Request a new one.")
+            messages.error(
+                request,
+                "This code has expired. Request a new one."
+            )
+
         else:
             verification.attempts += 1
-            verification.save(update_fields=["attempts"])
+            verification.save(
+                update_fields=["attempts"]
+            )
 
-            if len(code) == OTP_LENGTH and code.isdigit() and check_password(
-                code, verification.otp_hash
+            if (
+                len(code) == OTP_LENGTH
+                and code.isdigit()
+                and check_password(
+                    code,
+                    verification.otp_hash
+                )
             ):
                 with transaction.atomic():
                     user.is_active = True
                     user.save(update_fields=["is_active"])
+
                     verification.delete()
 
-                messages.success(request, "Email verified. You can now sign in.")
+                messages.success(
+                    request,
+                    "Email verified. You can now sign in."
+                )
+
                 return redirect("login")
 
-            messages.error(request, "Invalid verification code.")
+            messages.error(
+                request,
+                "Invalid verification code."
+            )
 
+    # Mask email address for display.
     email_name, _, email_domain = user.email.partition("@")
+
     masked_email = (
         f"{email_name[:1]}***@{email_domain}"
         if email_domain
@@ -226,6 +427,10 @@ def verify_email_view(request, uidb64):
         },
     )
 
+
+# =========================================================
+# LOGOUT
+# =========================================================
 
 @login_required
 def logout_view(request):
@@ -251,19 +456,15 @@ def technical_analysis(request):
     )
 
     if symbol not in SUPPORTED_SYMBOLS:
-
         return JsonResponse(
             {
                 "success": False,
-                "error": (
-                    f"Unsupported symbol: {symbol}"
-                )
+                "error": f"Unsupported symbol: {symbol}",
             },
             status=400
         )
 
     try:
-
         candles = get_market_candles(
             symbol=symbol,
             timeframe=timeframe
@@ -279,32 +480,34 @@ def technical_analysis(request):
         analysis["symbol"] = symbol
         analysis["timeframe"] = timeframe
 
-        analysis["timeframe_label"] = (
-            {
-                "1": "1m",
-                "5": "5m",
-                "15": "15m",
-                "30": "30m",
-                "60": "1H",
-                "D": "1D",
-            }
-            .get(
-                timeframe,
-                timeframe
-            )
+        analysis["timeframe_label"] = {
+            "1": "1m",
+            "5": "5m",
+            "15": "15m",
+            "30": "30m",
+            "60": "1H",
+            "D": "1D",
+        }.get(
+            timeframe,
+            timeframe
         )
 
-        return JsonResponse(
-            analysis
-        )
+        return JsonResponse(analysis)
 
-    except Exception as error:
+    except Exception:
+        # Log full details server-side, but avoid exposing internals
+        # such as provider errors or configuration details to clients.
+        logger.exception(
+            "Technical analysis failed for symbol=%s timeframe=%s",
+            symbol,
+            timeframe,
+        )
 
         return JsonResponse(
             {
                 "success": False,
                 "symbol": symbol,
-                "error": str(error)
+                "error": "Unable to generate technical analysis right now.",
             },
             status=500
         )
