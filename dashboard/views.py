@@ -3,6 +3,8 @@ import logging
 import secrets
 from datetime import timedelta
 
+import requests
+
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login, logout
@@ -10,7 +12,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth.hashers import make_password, check_password
-from django.core.mail import send_mail
 from django.db import transaction, IntegrityError
 from django.http import JsonResponse
 from django.shortcuts import redirect, render
@@ -32,12 +33,19 @@ from dashboard.decorators import api_login_required
 logger = logging.getLogger(__name__)
 
 
+# =========================================================
+# CONFIGURATION
+# =========================================================
+
 SUPPORTED_SYMBOLS = {"XAUUSD", "EURUSD", "GBPUSD", "BTCUSD"}
 
 OTP_LENGTH = 6
 OTP_EXPIRY_MINUTES = 10
 OTP_MAX_ATTEMPTS = 5
 OTP_RESEND_COOLDOWN_SECONDS = 60
+
+BREVO_EMAIL_API_URL = "https://api.brevo.com/v3/smtp/email"
+BREVO_API_TIMEOUT = 15
 
 
 # =========================================================
@@ -63,7 +71,6 @@ def login_view(request):
         if form.is_valid():
             user = form.get_user()
 
-            # Django's ModelBackend rejects inactive users.
             if not user.is_active:
                 form.add_error(
                     None,
@@ -97,23 +104,93 @@ def login_view(request):
 
 
 # =========================================================
-# EMAIL OTP
+# BREVO HTTPS EMAIL API
+# =========================================================
+
+def _send_brevo_email(recipient_email, subject, text_content):
+    """
+    Send a transactional email using Brevo's HTTPS API.
+
+    Requires these environment variables:
+        BREVO_API_KEY
+        BREVO_SENDER_EMAIL
+        BREVO_SENDER_NAME (optional)
+    """
+
+    api_key = getattr(settings, "BREVO_API_KEY", "")
+    sender_email = getattr(settings, "BREVO_SENDER_EMAIL", "")
+    sender_name = getattr(
+        settings,
+        "BREVO_SENDER_NAME",
+        "Forex Terminal"
+    )
+
+    if not api_key:
+        raise RuntimeError("BREVO_API_KEY is not configured.")
+
+    if not sender_email:
+        raise RuntimeError("BREVO_SENDER_EMAIL is not configured.")
+
+    payload = {
+        "sender": {
+            "name": sender_name,
+            "email": sender_email,
+        },
+        "to": [
+            {
+                "email": recipient_email,
+            }
+        ],
+        "subject": subject,
+        "textContent": text_content,
+    }
+
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json",
+    }
+
+    response = requests.post(
+        BREVO_EMAIL_API_URL,
+        json=payload,
+        headers=headers,
+        timeout=BREVO_API_TIMEOUT,
+    )
+
+    # Brevo normally returns HTTP 201 when the email is accepted.
+    # Raise for HTTP errors so registration/resend can handle failure.
+    if not response.ok:
+        logger.error(
+            "Brevo API returned HTTP %s while sending email.",
+            response.status_code,
+        )
+        response.raise_for_status()
+
+    logger.info(
+        "Brevo accepted a transactional email for recipient=%s",
+        recipient_email,
+    )
+
+
+# =========================================================
+# ISSUE EMAIL OTP
 # =========================================================
 
 def _issue_email_otp(user, verification):
     """
-    Generate and email an OTP.
+    Generate an OTP, save its hash, and send it through Brevo API.
 
     Returns:
-        (True, success_message) when sent.
-        (False, cooldown_message) when resend is too soon.
+        (True, success_message) if accepted by Brevo.
+        (False, cooldown_message) if resend cooldown is active.
 
-    Raises an exception if the email provider fails.
+    Raises an exception if sending fails.
     """
 
     now = timezone.now()
 
-    # Enforce resend cooldown.
+    # Prevent repeated OTP requests within the cooldown period.
     if verification.last_sent_at:
         elapsed = (
             now - verification.last_sent_at
@@ -125,7 +202,7 @@ def _issue_email_otp(user, verification):
                 "Please wait a minute before requesting another code."
             )
 
-    # Generate a cryptographically secure 6-digit OTP.
+    # Generate a secure 6-digit OTP.
     otp = f"{secrets.randbelow(10 ** OTP_LENGTH):0{OTP_LENGTH}d}"
 
     verification.otp_hash = make_password(otp)
@@ -145,24 +222,23 @@ def _issue_email_otp(user, verification):
     )
 
     try:
-        send_mail(
-            subject="Verify your email",
-            message=(
-                f"Your Forex Terminal verification code is {otp}. "
-                f"It expires in {OTP_EXPIRY_MINUTES} minutes. "
+        _send_brevo_email(
+            recipient_email=user.email,
+            subject="Verify your Forex Terminal email",
+            text_content=(
+                f"Your Forex Terminal verification code is {otp}.\n\n"
+                f"This code expires in {OTP_EXPIRY_MINUTES} minutes.\n\n"
                 "If you did not request this, you can ignore this email."
             ),
-            from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[user.email],
-            fail_silently=False,
         )
 
     except Exception:
-        # Invalidate the OTP if the email provider rejects the message.
+        # Invalidate the OTP if Brevo rejects the API request
+        # or the request fails.
         verification.otp_hash = ""
         verification.save(update_fields=["otp_hash"])
 
-        # Log the exception server-side; never log the OTP itself.
+        # Do not log the OTP or API key.
         logger.exception(
             "Failed to send verification email for user_id=%s",
             user.pk,
@@ -191,7 +267,7 @@ def register_view(request):
             user = None
 
             try:
-                # Create the inactive user and verification record.
+                # Create the inactive user and OTP record.
                 with transaction.atomic():
                     user = form.save(commit=False)
                     user.is_active = False
@@ -214,13 +290,14 @@ def register_view(request):
                     request,
                     "An account with these details may already exist."
                 )
+
                 return render(
                     request,
                     "dashboard/register.html",
                     {"form": form},
                 )
 
-            # Send OTP after the database transaction has committed.
+            # Send OTP after the database transaction commits.
             try:
                 sent, message = _issue_email_otp(
                     user,
@@ -228,12 +305,12 @@ def register_view(request):
                 )
 
             except Exception:
-                # Keep the inactive account and verification record.
-                # The user can retry using the Resend code option.
+                # Keep the account inactive. The user can retry
+                # using the Resend code option.
                 messages.error(
                     request,
                     "We couldn't send the verification email right now. "
-                    "Please check your email details and try Resend code."
+                    "Please try Resend code in a minute."
                 )
 
                 return redirect(
@@ -244,10 +321,7 @@ def register_view(request):
                 )
 
             if sent:
-                messages.success(
-                    request,
-                    "Account created. Enter the verification code sent to your email."
-                )
+                messages.success(request, message)
             else:
                 messages.warning(request, message)
 
@@ -408,7 +482,7 @@ def verify_email_view(request, uidb64):
                 "Invalid verification code."
             )
 
-    # Mask email address for display.
+    # Mask email address on the verification page.
     email_name, _, email_domain = user.email.partition("@")
 
     masked_email = (
@@ -495,8 +569,6 @@ def technical_analysis(request):
         return JsonResponse(analysis)
 
     except Exception:
-        # Log full details server-side, but avoid exposing internals
-        # such as provider errors or configuration details to clients.
         logger.exception(
             "Technical analysis failed for symbol=%s timeframe=%s",
             symbol,
