@@ -624,28 +624,9 @@ class BrevoPasswordResetForm(PasswordResetForm):
         to_email,
         html_email_template_name=None,
     ):
-        subject = render_to_string(
-            subject_template_name, context
-        ).strip()
-
-        # Email subjects must be a single line.
-        subject = " ".join(subject.splitlines())
-
-        text_content = render_to_string(
-            email_template_name, context
-        )
-
-        html_content = None
-
-        if html_email_template_name:
-            html_content = render_to_string(
-                html_email_template_name, context
-            )
-
-        api_key = getattr(settings, "BREVO_API_KEY", None)
-        sender_email = getattr(
-            settings, "BREVO_SENDER_EMAIL", None
-        )
+        # Validate configuration before rendering templates.
+        api_key = getattr(settings, "BREVO_API_KEY", "")
+        sender_email = getattr(settings, "BREVO_SENDER_EMAIL", "")
         sender_name = getattr(
             settings, "BREVO_SENDER_NAME", "Forex Dashboard"
         )
@@ -655,41 +636,51 @@ class BrevoPasswordResetForm(PasswordResetForm):
                 "Brevo password reset email settings are missing."
             )
 
+        subject = render_to_string(
+            subject_template_name, context
+        ).strip()
+        # Email subjects must be a single line.
+        subject = " ".join(subject.splitlines())
+
+        text_content = render_to_string(
+            email_template_name, context
+        )
+        html_content = None
+        if html_email_template_name:
+            html_content = render_to_string(
+                html_email_template_name, context
+            )
+
         payload = {
-            "sender": {
-                "name": sender_name,
-                "email": sender_email,
-            },
-            "to": [
-                {
-                    "email": to_email,
-                }
-            ],
+            "sender": {"name": sender_name, "email": sender_email},
+            "to": [{"email": to_email}],
             "subject": subject,
             "textContent": text_content,
         }
-
         if html_content:
             payload["htmlContent"] = html_content
 
         response = requests.post(
-            "https://api.brevo.com/v3/smtp/email",
+            BREVO_EMAIL_API_URL,
             headers={
                 "accept": "application/json",
                 "api-key": api_key,
                 "content-type": "application/json",
             },
             json=payload,
-            timeout=15,
+            timeout=BREVO_API_TIMEOUT,
         )
 
         if response.status_code not in (200, 201, 202):
-            # Do not log the reset URL, token, or API key.
+            # Never log the reset URL, token, or API key.
             logger.error(
                 "Brevo password reset email failed. Status: %s",
                 response.status_code,
             )
             response.raise_for_status()
+            raise RuntimeError(
+                f"Brevo returned unexpected status {response.status_code}."
+            )
 
 
 @require_http_methods(["GET", "POST"])
@@ -705,19 +696,19 @@ def password_reset_request(request):
         if form.is_valid():
             try:
                 form.save(
-                request=request,
-                use_https=request.is_secure(),
-                from_email=settings.BREVO_SENDER_EMAIL,
-                email_template_name=(
-                    "dashboard/auth/password_reset_email.txt"
-                ),
-                subject_template_name=(
-                    "dashboard/auth/password_reset_subject.txt"
-                ),
-                token_generator=default_token_generator,
+                    request=request,
+                    use_https=request.is_secure(),
+                    from_email=getattr(settings, "BREVO_SENDER_EMAIL", ""),
+                    email_template_name=(
+                        "dashboard/auth/password_reset_email.txt"
+                    ),
+                    subject_template_name=(
+                        "dashboard/auth/password_reset_subject.txt"
+                    ),
+                    token_generator=default_token_generator,
                 )
 
-            except requests.RequestException:
+            except (requests.RequestException, ImproperlyConfigured):
                 # Do not expose Brevo errors or account existence.
                 logger.exception(
                     "Password reset email delivery failed."
