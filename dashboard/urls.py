@@ -1,3 +1,8 @@
+from django.contrib.auth import views as auth_views
+from django.urls import reverse_lazy
+
+from .views import password_reset_request
+
 from django.urls import path
 
 from . import views
@@ -93,5 +98,41 @@ urlpatterns = [
         market_candles,
         name="market_candles"
     ),
+
+    # Password reset
+        # =================================================
+# PASSWORD RESET
+# =================================================
+
+path(
+    "password-reset/",
+    password_reset_request,
+    name="password_reset",
+),
+
+path(
+    "password-reset/done/",
+    auth_views.PasswordResetDoneView.as_view(
+        template_name="dashboard/auth/password_reset_done.html"
+    ),
+    name="password_reset_done",
+),
+
+path(
+    "password-reset/confirm/<uidb64>/<token>/",
+    auth_views.PasswordResetConfirmView.as_view(
+        template_name="dashboard/auth/password_reset_confirm.html",
+        success_url=reverse_lazy("password_reset_complete"),
+    ),
+    name="password_reset_confirm",
+),
+
+path(
+    "password-reset/complete/",
+    auth_views.PasswordResetCompleteView.as_view(
+        template_name="dashboard/auth/password_reset_complete.html"
+    ),
+    name="password_reset_complete",
+),
 
 ]

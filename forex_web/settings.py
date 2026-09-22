@@ -329,3 +329,10 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 
 SECURE_REFERRER_POLICY = "same-origin"
+
+# =========================================================
+# PASSWORD RESET SECURITY
+# =========================================================
+
+# Password reset link expires after 15 minutes (900 seconds)
+PASSWORD_RESET_TIMEOUT = 900
